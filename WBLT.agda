@@ -2,13 +2,15 @@ open import Level using (Level; _⊔_; 0ℓ)
 open import Data.Product
 open import Data.Product.Relation.Binary.Lex.Strict
 open import Data.Sum
-open import Data.Nat.Base using (ℕ; zero; suc; _+_; _≥_)
+open import Data.Nat.Base using (ℕ; zero; suc; _+_)
+open import Data.Bool using (if_then_else_)
 open import Relation.Nullary
 open import Relation.Binary.Core
 open import Relation.Binary.Bundles
 open import Relation.Binary.PropositionalEquality.Core
 open import Induction.WellFounded
 
+import Data.Nat.Base as ℕ
 import Data.Nat.Properties as ℕ
 
 module WBLT {a ℓ₁ ℓ₂} (decTotalOrder : DecTotalOrder a ℓ₁ ℓ₂) where
@@ -29,6 +31,10 @@ module _ {A : Set b} where
 
   singleton : P → A → Tree A
   singleton p x = branch p x 1 nil nil
+
+  size : Tree A → ℕ
+  size nil = 0
+  size (branch p x n hₗ hᵣ) = n
 
   data _≺_ : Rel (Tree A) 0ℓ where
     ≺-base : ∀ {p x n hₗ hᵣ} → hᵣ ≺ branch p x n hₗ hᵣ
@@ -52,19 +58,21 @@ module _ {A : Set b} where
   merge′ nil h@(branch _ _ _ _ _) _ = h
   merge′ h@(branch _ _ _ _ _) nil _ = h
   merge′ h₁@(branch p₁ _ _ _ _) h₂@(branch p₂ _ _ _ _) ac with p₁ ≤? p₂
-  merge′ h₁@(branch p₁ x₁ _ hₗ hᵣ) h₂ (acc rec) | yes p₁≤p₂ = merge′ hᵣ h₂ (rec (hᵣ , h₂) (inj₁ ≺-base))
-  merge′ h₁ h₂@(branch p₂ x₂ _ hₗ hᵣ) (acc rec) | no  p₁≰p₂ = merge′ h₁ hᵣ ((rec (h₁ , hᵣ) (inj₂ (refl , ≺-base))))
+  merge′ h₁@(branch p₁ x₁ n₁ hₗ hᵣ) h₂ (acc rec) | yes p₁≤p₂ with merge′ hᵣ h₂ (rec (hᵣ , h₂) (inj₁ ≺-base))
+  ... | hᵣ' = if does (n₁ ℕ.≥? size hᵣ')
+    then branch p₁ x₁ (suc (n₁ + size hᵣ')) h₁ hᵣ'
+    else branch p₁ x₁ (suc (size hᵣ' + n₁)) hᵣ' h₁
+  merge′ h₁ h₂@(branch p₂ x₂ n₂ hₗ hᵣ) (acc rec) | no p₁≰p₂ with merge′ h₁ hᵣ ((rec (h₁ , hᵣ) (inj₂ (refl , ≺-base))))
+  ... | hᵣ' = if does (n₂ ℕ.≥? size hᵣ')
+    then branch p₂ x₂ (suc (n₂ + size hᵣ')) hₗ hᵣ'
+    else branch p₂ x₂ (suc (size hᵣ' + n₂)) hᵣ' h₁
   
   merge : Tree A → Tree A → Tree A
   merge h₁ h₂ = merge′ h₁ h₂ (≺ₗₑₓ-wellFounded (h₁ , h₂))
 
-  size : Tree A → ℕ
-  size nil = 0
-  size (branch p x n hₗ hᵣ) = n
-
   data Leftist : Tree A → Set where
     leftist-nil : Leftist nil
-    leftist-branch : ∀ {p x n hₗ hᵣ} → n ≡ suc (size hₗ + size hᵣ) → size hₗ ≥ size hᵣ → Leftist (branch p x n hₗ hᵣ)
+    leftist-branch : ∀ {p x n hₗ hᵣ} → n ≡ suc (size hₗ + size hᵣ) → size hₗ ℕ.≥ size hᵣ → Leftist (branch p x n hₗ hᵣ)
   
   data _#_ (p : P) : Tree A → Set ℓ₂ where
     #-nil : p # nil
@@ -80,4 +88,3 @@ record WBLT (A : Set b) : Set (a ⊔ b ⊔ ℓ₂) where
     tree : Tree A
     leftist : Leftist tree
     heap : Heap tree
- 
