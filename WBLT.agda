@@ -1,9 +1,10 @@
 open import Level using (Level; _⊔_; 0ℓ)
 open import Data.Product
 open import Data.Product.Relation.Binary.Lex.Strict
-open import Data.Sum
+open import Data.Sum.Base
 open import Data.Nat.Base using (ℕ; zero; suc; _+_)
-open import Data.Bool using (if_then_else_)
+open import Data.Bool.Base hiding (_≤_)
+open import Data.Maybe.Base
 open import Relation.Nullary
 open import Relation.Binary.Core
 open import Relation.Binary.Bundles
@@ -25,7 +26,7 @@ data Tree (A : Set b) : Set (a ⊔ b) where
   nil : Tree A
   branch : ∀ (p : P) (x : A) (n : ℕ) (hₗ : Tree A) (hᵣ : Tree A) → Tree A
 
-module _ {A : Set b} where
+module TREE {A : Set b} where
   size : Tree A → ℕ
   size nil = 0
   size (branch p x n hₗ hᵣ) = n
@@ -153,7 +154,68 @@ module _ {A : Set b} where
   
 record WBLT (A : Set b) : Set (a ⊔ b ⊔ ℓ₂) where
   constructor wblt
+  open TREE
   field
     tree : Tree A
     leftist : Leftist tree
     heap : Heap tree
+
+module _ {A : Set b} where
+  merge : WBLT A → WBLT A → WBLT A
+  merge (wblt h₁ lst₁ heap₁) (wblt h₂ lst₂ heap₂) = record
+    { tree = TREE.merge h₁ h₂
+    ; leftist = TREE.merge-leftist lst₁ lst₂
+    ; heap = TREE.merge-heap heap₁ heap₂
+    }
+
+  size : WBLT A → ℕ
+  size (wblt h _ _) = TREE.size h
+  
+  null : WBLT A → Bool
+  null (wblt nil _ _) = true
+  null (wblt (branch _ _ _ _ _) _ _) = false
+  
+  empty : WBLT A
+  empty = record
+    { tree = nil
+    ; leftist = leftist-nil
+    ; heap = heap-nil
+    }
+    where open TREE
+  
+  singleton : P → A → WBLT A
+  singleton p x = record
+    { tree = branch p x 1 nil nil
+    ; leftist = leftist-branch refl ℕ.z≤n leftist-nil leftist-nil
+    ; heap = heap-branch #-nil #-nil heap-nil heap-nil
+    }
+    where open TREE
+  
+  insert : P → A → WBLT A → WBLT A
+  insert p x h = merge h (singleton p x)
+
+  view : WBLT A → Maybe (P × A)
+  view (wblt nil _ _) = nothing
+  view (wblt (branch p x _ _ _) _ _) = just (p , x)
+  
+  module _ where
+    open TREE
+    pop : WBLT A → Maybe (P × A × WBLT A)
+    pop (wblt nil _ _) = nothing
+    pop (wblt (branch p x _ hₗ hᵣ) (leftist-branch _ _ lstₗ lstᵣ) (heap-branch _ _ heapₗ heapᵣ))
+      = just (p , x , tree)
+      where
+        tree = record
+          { tree = TREE.merge hₗ hᵣ
+          ; leftist = merge-leftist lstₗ lstᵣ
+          ; heap = merge-heap heapₗ heapᵣ
+          }
+
+    tail : WBLT A → Maybe (WBLT A)
+    tail (wblt nil _ _) = nothing
+    tail (wblt (branch p x _ hₗ hᵣ) (leftist-branch _ _ lstₗ lstᵣ) (heap-branch _ _ heapₗ heapᵣ))
+      = just record
+        { tree = TREE.merge hₗ hᵣ
+        ; leftist = merge-leftist lstₗ lstᵣ
+        ; heap = merge-heap heapₗ heapᵣ
+        }
