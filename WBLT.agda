@@ -68,42 +68,89 @@ module _ {A : Set b} where
   merge′ nil nil _ = nil
   merge′ nil h@(branch _ _ _ _ _) _ = h
   merge′ h@(branch _ _ _ _ _) nil _ = h
-  merge′ h₁@(branch p₁ _ _ _ _) h₂@(branch p₂ _ _ _ _) _ with p₁ ≤? p₂
-  merge′ h₁@(branch p₁ x₁ n₁ hₗ hᵣ) h₂ (acc rec) | yes p₁≤p₂ with merge′ hᵣ h₂ (rec (hᵣ , h₂) (inj₁ ≺-base))
+  merge′ h₁@(branch p₁ _ _ _ _) h₂@(branch p₂ _ _ _ _) _ with total p₁ p₂
+  merge′ h₁@(branch p₁ x₁ n₁ hₗ hᵣ) h₂ (acc rec) | inj₁ _ with merge′ hᵣ h₂ (rec (hᵣ , h₂) (inj₁ ≺-base))
   ... | hᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
   ... | inj₁ _ = branch p₁ x₁ (suc (size hₗ + size hᵣ′)) hₗ hᵣ′
   ... | inj₂ _ = branch p₁ x₁ (suc (size hᵣ′ + size hₗ)) hᵣ′ hₗ
-  merge′ h₁ h₂@(branch p₂ x₂ n₂ hₗ hᵣ) (acc rec) | no p₁≰p₂ with merge′ h₁ hᵣ ((rec (h₁ , hᵣ) (inj₂ (refl , ≺-base))))
+  merge′ h₁ h₂@(branch p₂ x₂ n₂ hₗ hᵣ) (acc rec) | inj₂ _ with merge′ h₁ hᵣ ((rec (h₁ , hᵣ) (inj₂ (refl , ≺-base))))
   ... | hᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
   ... | inj₁ _ = branch p₂ x₂ (suc (size hₗ + size hᵣ′)) hₗ hᵣ′
   ... | inj₂ _ = branch p₂ x₂ (suc (size hᵣ′ + size hₗ)) hᵣ′ hₗ
   
-  merge′-Leftist : ∀ {h₁ h₂ : Tree A} → Leftist h₁ → Leftist h₂ → (rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Leftist (merge′ h₁ h₂ rec)
-  merge′-Leftist leftist-nil leftist-nil _ = leftist-nil
-  merge′-Leftist leftist-nil lst₂@(leftist-branch _ _ _ _) _ = lst₂
-  merge′-Leftist lst₁@(leftist-branch _ _ _ _) leftist-nil _ = lst₁
-  merge′-Leftist {h₁ = branch p₁ _ _ _ _} {h₂ = branch p₂ _ _ _ _} (leftist-branch _ _ _ _) (leftist-branch _ _ _ _) _ with p₁ ≤? p₂
-  merge′-Leftist
+  merge′-leftist : ∀ {h₁ h₂ : Tree A} → Leftist h₁ → Leftist h₂ → (rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Leftist (merge′ h₁ h₂ rec)
+  merge′-leftist leftist-nil leftist-nil _ = leftist-nil
+  merge′-leftist leftist-nil lst₂@(leftist-branch _ _ _ _) _ = lst₂
+  merge′-leftist lst₁@(leftist-branch _ _ _ _) leftist-nil _ = lst₁
+  merge′-leftist {h₁ = branch p₁ _ _ _ _} {h₂ = branch p₂ _ _ _ _} (leftist-branch _ _ _ _) (leftist-branch _ _ _ _) _ with total p₁ p₂
+  merge′-leftist
     {h₁ = h₁@(branch p₁ x₁ n₁ hₗ hᵣ)} {h₂ = h₂}
     (leftist-branch _ _ lstₗ lstᵣ) lst₂ (acc rec)
-    | yes p₁≤p₂ with merge′ hᵣ h₂ (rec (hᵣ , h₂) (inj₁ ≺-base)) | merge′-Leftist lstᵣ lst₂ (rec (hᵣ , h₂) (inj₁ ≺-base))
+    | inj₁ _ with merge′ hᵣ h₂ (rec (hᵣ , h₂) (inj₁ ≺-base)) | merge′-leftist lstᵣ lst₂ (rec (hᵣ , h₂) (inj₁ ≺-base))
   ... | hᵣ′ | lstᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
   ... | inj₁ size[hₗ]≥size[hᵣ′] = leftist-branch refl size[hₗ]≥size[hᵣ′] lstₗ lstᵣ′
   ... | inj₂ size[hᵣ′]≥size[hₗ] = leftist-branch refl size[hᵣ′]≥size[hₗ] lstᵣ′ lstₗ
-  merge′-Leftist
+  merge′-leftist
     {h₁ = h₁} {h₂ = h₂@(branch p₂ x₂ n₂ hₗ hᵣ)}
     lst₁ (leftist-branch _ _ lstₗ lstᵣ) (acc rec)
-    | no p₁≰p₂ with merge′ h₁ hᵣ (rec (h₁ , hᵣ) (inj₂ (refl , ≺-base))) | merge′-Leftist lst₁ lstᵣ (rec (h₁ , hᵣ) (inj₂ (refl , ≺-base)))
+    | inj₂ _ with merge′ h₁ hᵣ (rec (h₁ , hᵣ) (inj₂ (refl , ≺-base))) | merge′-leftist lst₁ lstᵣ (rec (h₁ , hᵣ) (inj₂ (refl , ≺-base)))
   ... | hᵣ′ | lstᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
   ... | inj₁ size[hₗ]≥size[hᵣ′] = leftist-branch refl size[hₗ]≥size[hᵣ′] lstₗ lstᵣ′
   ... | inj₂ size[hᵣ′]≥size[hₗ] = leftist-branch refl size[hᵣ′]≥size[hₗ] lstᵣ′ lstₗ
   
-  merge′-Heap : ∀ {h₁ h₂ : Tree A} → Heap h₁ → Heap h₂ → (rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Heap (merge′ h₁ h₂ rec)
-  merge′-Heap = ?
+  merge′-# : ∀ {p : P} {h₁ h₂ : Tree A} → p # h₁ → p # h₂ → (rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → p # (merge′ h₁ h₂ rec)
+  merge′-# #-nil #-nil _ = #-nil
+  merge′-# #-nil p#h₂@(#-branch _) _ = p#h₂
+  merge′-# p#h₁@(#-branch _) #-nil _ = p#h₁
+  merge′-# {h₁ = branch p₁ _ _ _ _} {h₂ = branch p₂ _ _ _ _} (#-branch _) (#-branch _) _ with total p₁ p₂
+  merge′-#
+    {h₁ = h₁@(branch p₁ x₁ n₁ hₗ hᵣ)} {h₂ = h₂}
+    (#-branch p≤p₁) _ (acc rec)
+    | inj₁ p₁≤p₂ with merge′ hᵣ h₂ (rec (hᵣ , h₂) (inj₁ ≺-base))
+  ... | hᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
+  ... | inj₁ _ = #-branch p≤p₁
+  ... | inj₂ _ = #-branch p≤p₁
+  merge′-#
+    {h₁ = h₁} {h₂@(branch p₂ x₂ n₂ hₗ hᵣ)}
+    _ (#-branch p≤p₂) (acc rec)
+    | inj₂ p₂≤p₁ with merge′ h₁ hᵣ (rec (h₁ , hᵣ) (inj₂ (refl , ≺-base)))
+  ... | hᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
+  ... | inj₁ _ = #-branch p≤p₂
+  ... | inj₂ _ = #-branch p≤p₂
+  
+  merge′-heap : ∀ {h₁ h₂ : Tree A} → Heap h₁ → Heap h₂ → (rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Heap (merge′ h₁ h₂ rec)
+  merge′-heap heap-nil heap-nil _ = heap-nil
+  merge′-heap heap-nil heap₂@(heap-branch _ _ _ _) _ = heap₂
+  merge′-heap heap₁@(heap-branch _ _ _ _) heap-nil _ = heap₁
+  merge′-heap {h₁ = branch p₁ _ _ _ _} {h₂ = branch p₂ _ _ _ _} (heap-branch _ _ _ _) (heap-branch _ _ _ _) _ with total p₁ p₂
+  merge′-heap
+    {h₁ = h₁@(branch p₁ x₁ n₁ hₗ hᵣ)} {h₂ = h₂}
+    (heap-branch p₁#hₗ p₁#hᵣ heapₗ heapᵣ) heap₂ (acc rec)
+    | inj₁ p₁≤p₂ with merge′ hᵣ h₂ (rec (hᵣ , h₂) (inj₁ ≺-base))
+                    | merge′-heap heapᵣ heap₂ (rec (hᵣ , h₂) (inj₁ ≺-base))
+                    | merge′-# p₁#hᵣ (#-branch p₁≤p₂) (rec (hᵣ , h₂) (inj₁ ≺-base))
+  ... | hᵣ′ | heapᵣ′ | p₁#hᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
+  ... | inj₁ _ = heap-branch p₁#hₗ p₁#hᵣ′ heapₗ heapᵣ′
+  ... | inj₂ _ = heap-branch p₁#hᵣ′ p₁#hₗ heapᵣ′ heapₗ
+  merge′-heap
+    {h₁ = h₁} {h₂@(branch p₂ x₂ n₂ hₗ hᵣ)}
+    heap₁ (heap-branch p₂#hₗ p₂#hᵣ heapₗ heapᵣ) (acc rec)
+    | inj₂ p₂≤p₁ with merge′ h₁ hᵣ (rec (h₁ , hᵣ) (inj₂ (refl , ≺-base)))
+                    | merge′-heap heap₁ heapᵣ (rec (h₁ , hᵣ) (inj₂ (refl , ≺-base)))
+                    | merge′-# (#-branch p₂≤p₁) p₂#hᵣ (rec (h₁ , hᵣ) (inj₂ (refl , ≺-base)))
+  ... | hᵣ′ | heapᵣ′ | p₂#hᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
+  ... | inj₁ _ = heap-branch p₂#hₗ p₂#hᵣ′ heapₗ heapᵣ′
+  ... | inj₂ _ = heap-branch p₂#hᵣ′ p₂#hₗ heapᵣ′ heapₗ
   
   merge : Tree A → Tree A → Tree A
-  merge h₁ h₂ = merge′ h₁ h₂ (≺ₗₑₓ-wellFounded (h₁ , h₂))
-    
+  merge h₁ h₂ = merge′ h₁ h₂ (≺ₗₑₓ-wellFounded _)
+
+  merge-leftist : ∀ {h₁ h₂ : Tree A} → Leftist h₁ → Leftist h₂ → Leftist (merge h₁ h₂)
+  merge-leftist lst₁ lst₂ = merge′-leftist lst₁ lst₂ (≺ₗₑₓ-wellFounded _)
+  
+  merge-heap : ∀ {h₁ h₂ : Tree A} → Heap h₁ → Heap h₂ → Heap (merge h₁ h₂)
+  merge-heap heap₁ heap₂ = merge′-heap heap₁ heap₂ (≺ₗₑₓ-wellFounded _)
+  
 record WBLT (A : Set b) : Set (a ⊔ b ⊔ ℓ₂) where
   constructor wblt
   field
