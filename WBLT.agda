@@ -65,7 +65,7 @@ module TREE {A : Set b} where
   ≺ₗₑₓ-wellFounded : WellFounded _≺ₗₑₓ_
   ≺ₗₑₓ-wellFounded = ×-wellFounded ≺-wellFounded ≺-wellFounded
   
-  merge′ : ∀ (h₁ h₂ : Tree A) → Acc _≺ₗₑₓ_ (h₁ , h₂) → Tree A
+  merge′ : ∀ (h₁ h₂ : Tree A) → (@0 rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Tree A
   merge′ nil nil _ = nil
   merge′ nil h@(branch _ _ _ _ _) _ = h
   merge′ h@(branch _ _ _ _ _) nil _ = h
@@ -79,7 +79,7 @@ module TREE {A : Set b} where
   ... | inj₁ _ = branch p₂ x₂ (suc (size hₗ + size hᵣ′)) hₗ hᵣ′
   ... | inj₂ _ = branch p₂ x₂ (suc (size hᵣ′ + size hₗ)) hᵣ′ hₗ
   
-  merge′-leftist : ∀ {h₁ h₂ : Tree A} → Leftist h₁ → Leftist h₂ → (rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Leftist (merge′ h₁ h₂ rec)
+  merge′-leftist : ∀ {h₁ h₂ : Tree A} → Leftist h₁ → Leftist h₂ → (@0 rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Leftist (merge′ h₁ h₂ rec)
   merge′-leftist leftist-nil leftist-nil _ = leftist-nil
   merge′-leftist leftist-nil lst₂@(leftist-branch _ _ _ _) _ = lst₂
   merge′-leftist lst₁@(leftist-branch _ _ _ _) leftist-nil _ = lst₁
@@ -99,7 +99,7 @@ module TREE {A : Set b} where
   ... | inj₁ size[hₗ]≥size[hᵣ′] = leftist-branch refl size[hₗ]≥size[hᵣ′] lstₗ lstᵣ′
   ... | inj₂ size[hᵣ′]≥size[hₗ] = leftist-branch refl size[hᵣ′]≥size[hₗ] lstᵣ′ lstₗ
   
-  merge′-# : ∀ {p : P} {h₁ h₂ : Tree A} → p # h₁ → p # h₂ → (rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → p # (merge′ h₁ h₂ rec)
+  merge′-# : ∀ {p : P} {h₁ h₂ : Tree A} → p # h₁ → p # h₂ → (@0 rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → p # (merge′ h₁ h₂ rec)
   merge′-# #-nil #-nil _ = #-nil
   merge′-# #-nil p#h₂@(#-branch _) _ = p#h₂
   merge′-# p#h₁@(#-branch _) #-nil _ = p#h₁
@@ -119,7 +119,7 @@ module TREE {A : Set b} where
   ... | inj₁ _ = #-branch p≤p₂
   ... | inj₂ _ = #-branch p≤p₂
   
-  merge′-heap : ∀ {h₁ h₂ : Tree A} → Heap h₁ → Heap h₂ → (rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Heap (merge′ h₁ h₂ rec)
+  merge′-heap : ∀ {h₁ h₂ : Tree A} → Heap h₁ → Heap h₂ → (@0 rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Heap (merge′ h₁ h₂ rec)
   merge′-heap heap-nil heap-nil _ = heap-nil
   merge′-heap heap-nil heap₂@(heap-branch _ _ _ _) _ = heap₂
   merge′-heap heap₁@(heap-branch _ _ _ _) heap-nil _ = heap₁
@@ -157,8 +157,8 @@ record WBLT (A : Set b) : Set (a ⊔ b ⊔ ℓ₂) where
   open TREE
   field
     tree : Tree A
-    leftist : Leftist tree
-    heap : Heap tree
+    @0 leftist : Leftist tree
+    @0 heap : Heap tree
 
 module _ {A : Set b} where
   merge : WBLT A → WBLT A → WBLT A
