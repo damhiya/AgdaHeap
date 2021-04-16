@@ -45,6 +45,6 @@ singleton x = record
   }
 
 findMin : PQueue → Maybe A
-findMin pq with List.map (root ∘ proj₂) (forest pq)
+findMin q with List.map (root ∘ proj₂) (forest q)
 ... | [] = nothing
-... | x ∷ xs = just (argmax key x xs)
+... | x ∷ xs = just (argmin key x xs)
