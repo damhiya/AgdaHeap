@@ -14,9 +14,9 @@ open import Induction.WellFounded
 import Data.Nat.Base as ℕ
 import Data.Nat.Properties as ℕ
 
-module WBLT {a ℓ₁ ℓ₂} (decTotalOrder : DecTotalOrder a ℓ₁ ℓ₂) where
+module Tree.WBLT.Base {a ℓ₁ ℓ₂} (totalOrder : TotalOrder a ℓ₁ ℓ₂) where
 
-open DecTotalOrder decTotalOrder renaming (Carrier to P) hiding (refl)
+open TotalOrder totalOrder renaming (Carrier to P) hiding (refl)
 
 private
   variable
