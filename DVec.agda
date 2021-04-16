@@ -11,7 +11,7 @@ private
     a p : Level
 
 infixr 5 _∷_
-  
+
 data DVec (A : Pred ℕ a) : ℕ → Set a where
   [] : DVec A zero
   _∷_ : ∀ {n} (x : A n) (xs : DVec A n) → DVec A (suc n)

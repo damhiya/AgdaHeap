@@ -39,11 +39,11 @@ module TREE {A : Set b} where
                      Leftist hₗ →
                      Leftist hᵣ →
                      Leftist (branch p x n hₗ hᵣ)
-  
+
   data _#_ (p : P) : Tree A → Set ℓ₂ where
     #-nil : p # nil
     #-branch : ∀ {p' x n hₗ hᵣ} → p ≤ p' → p # branch p' x n hₗ hᵣ
-  
+
   data Heap : Tree A → Set ℓ₂ where
     heap-nil : Heap nil
     heap-branch : ∀ {p x n hₗ hᵣ} → p # hₗ → p # hᵣ → Heap hₗ → Heap hᵣ → Heap (branch p x n hₗ hᵣ)
@@ -51,7 +51,7 @@ module TREE {A : Set b} where
   data _≺_ : Rel (Tree A) 0ℓ where
     ≺-base : ∀ {p x n hₗ hᵣ} → hᵣ ≺ branch p x n hₗ hᵣ
     ≺-ind : ∀ {p x n h hₗ hᵣ} → h ≺ hᵣ → h ≺ branch p x n hₗ hᵣ
-  
+
   ≺-wellFounded : WellFounded _≺_
   ≺-wellFounded′ : ∀ h → WfRec _≺_ (Acc _≺_) h
   ≺-wellFounded h = acc (≺-wellFounded′ h)
@@ -61,10 +61,10 @@ module TREE {A : Set b} where
 
   _≺ₗₑₓ_ : Rel (Tree A × Tree A) (a ⊔ b)
   _≺ₗₑₓ_ = ×-Lex _≡_ _≺_ _≺_
-  
+
   ≺ₗₑₓ-wellFounded : WellFounded _≺ₗₑₓ_
   ≺ₗₑₓ-wellFounded = ×-wellFounded ≺-wellFounded ≺-wellFounded
-  
+
   merge′ : ∀ (h₁ h₂ : Tree A) → (@0 rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Tree A
   merge′ nil nil _ = nil
   merge′ nil h@(branch _ _ _ _ _) _ = h
@@ -78,7 +78,7 @@ module TREE {A : Set b} where
   ... | hᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
   ... | inj₁ _ = branch p₂ x₂ (suc (size hₗ + size hᵣ′)) hₗ hᵣ′
   ... | inj₂ _ = branch p₂ x₂ (suc (size hᵣ′ + size hₗ)) hᵣ′ hₗ
-  
+
   merge′-leftist : ∀ {h₁ h₂ : Tree A} → Leftist h₁ → Leftist h₂ → (@0 rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Leftist (merge′ h₁ h₂ rec)
   merge′-leftist leftist-nil leftist-nil _ = leftist-nil
   merge′-leftist leftist-nil lst₂@(leftist-branch _ _ _ _) _ = lst₂
@@ -98,7 +98,7 @@ module TREE {A : Set b} where
   ... | hᵣ′ | lstᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
   ... | inj₁ size[hₗ]≥size[hᵣ′] = leftist-branch refl size[hₗ]≥size[hᵣ′] lstₗ lstᵣ′
   ... | inj₂ size[hᵣ′]≥size[hₗ] = leftist-branch refl size[hᵣ′]≥size[hₗ] lstᵣ′ lstₗ
-  
+
   merge′-# : ∀ {p : P} {h₁ h₂ : Tree A} → p # h₁ → p # h₂ → (@0 rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → p # (merge′ h₁ h₂ rec)
   merge′-# #-nil #-nil _ = #-nil
   merge′-# #-nil p#h₂@(#-branch _) _ = p#h₂
@@ -118,7 +118,7 @@ module TREE {A : Set b} where
   ... | hᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
   ... | inj₁ _ = #-branch p≤p₂
   ... | inj₂ _ = #-branch p≤p₂
-  
+
   merge′-heap : ∀ {h₁ h₂ : Tree A} → Heap h₁ → Heap h₂ → (@0 rec : Acc _≺ₗₑₓ_ (h₁ , h₂)) → Heap (merge′ h₁ h₂ rec)
   merge′-heap heap-nil heap-nil _ = heap-nil
   merge′-heap heap-nil heap₂@(heap-branch _ _ _ _) _ = heap₂
@@ -142,16 +142,16 @@ module TREE {A : Set b} where
   ... | hᵣ′ | heapᵣ′ | p₂#hᵣ′ with ℕ.≤-total (size hᵣ′) (size hₗ)
   ... | inj₁ _ = heap-branch p₂#hₗ p₂#hᵣ′ heapₗ heapᵣ′
   ... | inj₂ _ = heap-branch p₂#hᵣ′ p₂#hₗ heapᵣ′ heapₗ
-  
+
   merge : Tree A → Tree A → Tree A
   merge h₁ h₂ = merge′ h₁ h₂ (≺ₗₑₓ-wellFounded _)
 
   merge-leftist : ∀ {h₁ h₂ : Tree A} → Leftist h₁ → Leftist h₂ → Leftist (merge h₁ h₂)
   merge-leftist lst₁ lst₂ = merge′-leftist lst₁ lst₂ (≺ₗₑₓ-wellFounded _)
-  
+
   merge-heap : ∀ {h₁ h₂ : Tree A} → Heap h₁ → Heap h₂ → Heap (merge h₁ h₂)
   merge-heap heap₁ heap₂ = merge′-heap heap₁ heap₂ (≺ₗₑₓ-wellFounded _)
-  
+
 record WBLT (A : Set b) : Set (a ⊔ b ⊔ ℓ₂) where
   constructor wblt
   open TREE
@@ -170,11 +170,11 @@ module _ {A : Set b} where
 
   size : WBLT A → ℕ
   size (wblt h _ _) = TREE.size h
-  
+
   null : WBLT A → Bool
   null (wblt nil _ _) = true
   null (wblt (branch _ _ _ _ _) _ _) = false
-  
+
   empty : WBLT A
   empty = record
     { tree = nil
@@ -182,7 +182,7 @@ module _ {A : Set b} where
     ; heap = heap-nil
     }
     where open TREE
-  
+
   singleton : P → A → WBLT A
   singleton p x = record
     { tree = branch p x 1 nil nil
@@ -190,14 +190,14 @@ module _ {A : Set b} where
     ; heap = heap-branch #-nil #-nil heap-nil heap-nil
     }
     where open TREE
-  
+
   insert : P → A → WBLT A → WBLT A
   insert p x h = merge h (singleton p x)
 
   view : WBLT A → Maybe (P × A)
   view (wblt nil _ _) = nothing
   view (wblt (branch p x _ _ _) _ _) = just (p , x)
-  
+
   module _ where
     open TREE
     pop : WBLT A → Maybe (P × A × WBLT A)

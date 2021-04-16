@@ -11,7 +11,7 @@ private
   variable
     a : Level
     A : Set a
-  
+
 data Tree (A : Set a) : ℕ → Set a where
   linked : ∀ {n} → A → DVec (Tree A) n → Tree A n
 
