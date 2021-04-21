@@ -16,6 +16,6 @@ data DVec (A : Pred ℕ a) : ℕ → Set a where
   [] : DVec A zero
   _∷_ : ∀ {n} (x : A n) (xs : DVec A n) → DVec A (suc n)
 
-data All {A : Pred ℕ a} (P : ∀ {n} → Pred (A n) p) : ∀ {n} → DVec A n → Set (p ⊔ a) where
+data All {A : Pred ℕ a} (P : ∀ n → Pred (A n) p) : ∀ {n} → DVec A n → Set (p ⊔ a) where
   [] : All P []
-  _∷_ : ∀ {n} {x} {xs : DVec A n} (px : P x) (pxs : All P xs) → All P (x ∷ xs)
+  _∷_ : ∀ {n} {x} {xs : DVec A n} (px : P n x) (pxs : All P xs) → All P (x ∷ xs)

@@ -16,7 +16,7 @@ open import Tree.Binomial.Base
 
 infix 9 _#_
 data _#_ (k : K) : ∀ {n} → Tree A n → Set (a ⊔ b ⊔ ℓ₂) where
-  #-linked : ∀ {n x} {ts : DVec (Tree A) n} → k ≤ key x → k # linked x ts
+  #-conj : ∀ {n x} {ts : DVec (Tree A) n} → k ≤ key x → k # conj x ts
 
 data Heap : ∀ {n} → Tree A n → Set (a ⊔ b ⊔ ℓ₂) where
-  heap : ∀ {n x} {ts : DVec (Tree A) n} → All (λ t → key x # t × Heap t) ts → Heap (linked x ts)
+  heap : ∀ {n x} {ts : DVec (Tree A) n} → All (λ _ t → key x # t × Heap t) ts → Heap (conj x ts)

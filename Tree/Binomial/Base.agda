@@ -13,13 +13,13 @@ private
     A : Set a
 
 data Tree (A : Set a) : ℕ → Set a where
-  linked : ∀ {n} → A → DVec (Tree A) n → Tree A n
+  conj : ∀ {n} → A → DVec (Tree A) n → Tree A n
 
 link : ∀ {n} → Tree A n → Tree A n → Tree A (suc n)
-link t (linked x ts) = linked x (t ∷ ts)
+link t (conj x ts) = conj x (t ∷ ts)
 
 root : ∀ {n} → Tree A n → A
-root (linked x ts) = x
+root (conj x ts) = x
 
 rank0 : A → Tree A 0
-rank0 x = linked x []
+rank0 x = conj x []

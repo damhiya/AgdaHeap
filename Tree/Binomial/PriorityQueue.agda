@@ -62,14 +62,14 @@ findMin q with List.map (root ∘ proj₂) (forest q)
 
 private
   link′ : ∀ {n} → Tree A n → Tree A n → Tree A (suc n)
-  link′ h₁@(linked x xs) h₂@(linked y ys) with total (key x) (key y)
+  link′ h₁@(conj x xs) h₂@(conj y ys) with total (key x) (key y)
   ... | inj₁ kx≤ky = link h₂ h₁
   ... | inj₂ ky≤kx = link h₁ h₂
 
   link′-heap : ∀ {n} {h₁ h₂ : Tree A n} → Heap h₁ → Heap h₂ → Heap (link′ h₁ h₂)
-  link′-heap {h₁ = linked x xs} {h₂ = linked y ys} (heap hs₁) (heap hs₂) with total (key x) (key y)
-  ... | inj₁ kx≤ky = heap ((#-linked kx≤ky , heap hs₂) ∷ hs₁)
-  ... | inj₂ ky≤kx = heap ((#-linked ky≤kx , heap hs₁) ∷ hs₂)
+  link′-heap {h₁ = conj x xs} {h₂ = conj y ys} (heap hs₁) (heap hs₂) with total (key x) (key y)
+  ... | inj₁ kx≤ky = heap ((#-conj kx≤ky , heap hs₂) ∷ hs₁)
+  ... | inj₂ ky≤kx = heap ((#-conj ky≤kx , heap hs₁) ∷ hs₂)
 
   increment : ∀ {m} → Tree A m → List (∃[ n ] Tree A n) → List (∃[ n ] Tree A n)
   increment x [] = [ -, x ]
@@ -78,13 +78,22 @@ private
   ... | tri≈ _ refl _ = increment (link x y) ys
   ... | tri> _ _ _ = (-, y) ∷ increment x ys
 
-  increment-↗ : ∀ {m} {x : Tree A m} {xs} → Rank↗ xs → Rank↗ (increment x xs)
-  increment-↗ {x = x} {xs = []} _ = [-]
-  increment-↗ {m = m} {x = x} {xs = (n , y) ∷ ys} _ with <-cmp m n
-  increment-↗ rank↗ | tri< m<n _ _ = m<n ∷ rank↗
-  increment-↗ [-] | tri≈ _ refl _ = [-]
-  increment-↗ {x = x} {xs = (_ , y) ∷ _} (n<* ∷ rank↗) | tri≈ _ refl _ = increment-↗ {x = link x y} rank↗
-  increment-↗ _ | tri> _ _ n<m = {!!}
+  open import Data.Nat.Properties
+
+  increment-↗ : ∀ m (x : Tree A m) ys → Rank↗ ys → Rank↗ (increment x ys)
+  increment-↗ m x [] _ = {!!}
+  increment-↗ m x ((n₁ , y₁) ∷ []) _ = {!!}
+  increment-↗ m x ((n₁ , y₁) ∷ (n₂ , y₂) ∷ y) _ = {!!}
+  -- increment-↗ {x = x} {ys = []} _ = [-]
+  -- increment-↗ {m = m} {x = x} {ys = (n , y) ∷ ys} _ with <-cmp m n
+  -- increment-↗ rank↗ | tri< m<n _ _ = m<n ∷ rank↗
+  -- increment-↗ [-] | tri≈ _ refl _ = [-]
+  -- increment-↗ {x = x} {ys = (_ , y) ∷ _} (n<* ∷ rank↗) | tri≈ _ refl _ = increment-↗ {x = link x y} rank↗
+  -- increment-↗ {ys = (n₁ , y₁) ∷ []} [-] | tri> _ _ n<m = n<m ∷ [-]
+  -- increment-↗ {m = m} {x = x} {ys = (n₁ , y₁) ∷ (n₂ , y₂) ∷ ys} (n₁<n₂ ∷ rank↗) | tri> _ _ n₁<m with <-cmp m n₂
+  -- ... | tri< m<n₂ _ _ = n₁<m ∷ m<n₂ ∷ rank↗
+  -- ... | tri≈ _ refl _ = {!n<1+n n₁ ∷ increment-↗ _!}
+  -- ... | tri> _ _ _ = {!!}
 
   increment-heap : ∀ {m} {x : Tree A m} {xs} → Heap x → Heaps xs → Heaps (increment x xs)
   increment-heap = {!!}
@@ -92,6 +101,6 @@ private
 insert : A → PQueue → PQueue
 insert x q = record
   { forest = increment (rank0 x) (forest q)
-  ; forest-↗ = increment-↗ (forest-↗ q)
+  ; forest-↗ = increment-↗ _ _ _ (forest-↗ q)
   ; forest-heap = {!!}
   }
