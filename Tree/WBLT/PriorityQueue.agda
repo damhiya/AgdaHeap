@@ -1,19 +1,31 @@
+{-# OPTIONS --with-K --safe #-}
+
 open import Relation.Binary.Bundles
 
 module Tree.WBLT.PriorityQueue
   {a ℓ₁ ℓ₂} (totalOrder : TotalOrder a ℓ₁ ℓ₂) where
 
-open import Level
+open import Level hiding (suc)
+open import Function.Base
 open import Data.Product
-open import Data.Bool
-open import Data.Maybe.Base
-open import Data.Nat.Base using (ℕ; zero; suc)
+open import Data.Bool hiding (_≤_)
+open import Data.Maybe.Base as Maybe
+open import Data.Nat.Base using (ℕ; zero; suc; _+_)
+open import Data.List.Base using (List; unfold)
+open import Data.List.Relation.Unary.Linked
 open import Relation.Binary.PropositionalEquality.Core
 import Data.Nat.Base as ℕ
 import Data.Nat.Properties as ℕ
 
 open TotalOrder totalOrder renaming (Carrier to K) hiding (refl)
-open import Tree.WBLT.Base totalOrder renaming (size to #node; null to null?)
+import Tree.WBLT.Base totalOrder as Tree
+open Tree using
+  ( Tree; nil; node
+  ; Leftist; leftist-nil; leftist-node
+  ; #-nil; #-node
+  ; Heap; heap-nil; heap-node
+  ; merge; merge-leftist; merge-heap
+  )
 
 private
   variable
@@ -37,10 +49,10 @@ module PQueue {A : Set b} {key : A → K} where
     }
 
   size : WBLT A key → ℕ
-  size wblt = #node {key = key} (tree wblt)
+  size wblt = Tree.size {key = key} (tree wblt)
 
   null : WBLT A key → Bool
-  null wblt = null? {key = key} (tree wblt)
+  null wblt = Tree.null {key = key} (tree wblt)
 
   empty : WBLT A key
   empty = record
@@ -59,21 +71,6 @@ module PQueue {A : Set b} {key : A → K} where
   insert : A → WBLT A key → WBLT A key
   insert x wblt = meld wblt (singleton x)
 
-  findMin : WBLT A key → Maybe A
-  findMin wblt = root {key = key} (tree wblt)
-
-  deleteMin : WBLT A key → Maybe (WBLT A key)
-  deleteMin record {tree = nil} = nothing
-  deleteMin record
-    { tree = node x _ tₗ tᵣ
-    ; leftist = leftist-node _ _ lₗ lᵣ
-    ; heap = heap-node _ _ hₗ hᵣ
-    } = just record
-      { tree = merge tₗ tᵣ
-      ; leftist = merge-leftist lₗ lᵣ
-      ; heap = merge-heap hₗ hᵣ
-      }
-
   popMin : WBLT A key → Maybe (A × WBLT A key)
   popMin record {tree = nil} = nothing
   popMin record
@@ -85,3 +82,12 @@ module PQueue {A : Set b} {key : A → K} where
       ; leftist = merge-leftist lₗ lᵣ
       ; heap = merge-heap hₗ hᵣ
       })
+
+  findMin : WBLT A key → Maybe A
+  findMin wblt = Tree.findMin {key = key} (tree wblt)
+
+  deleteMin : WBLT A key → Maybe (WBLT A key)
+  deleteMin = Maybe.map proj₂ ∘ popMin
+
+  toList : WBLT A key → List A
+  toList wblt = Tree.toList {key = key} (tree wblt)

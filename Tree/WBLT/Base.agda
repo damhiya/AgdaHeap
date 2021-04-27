@@ -59,10 +59,6 @@ module _ {A : Set b} {key : A → K} where
   null nil = true
   null (node _ _ _ _) = false
 
-  root : Tree A key → Maybe A
-  root nil = nothing
-  root (node x _ _ _) = just x
-
   data Leftist : Tree A key → Set b where
     leftist-nil : Leftist nil
     leftist-node : ∀ {x n tₗ tᵣ} →
@@ -92,7 +88,7 @@ module _ {A : Set b} {key : A → K} where
 
   data ¬Null (x : A) : Tree A key → Set b where
     ¬null : ∀ {n tₗ tᵣ} → ¬Null x (node x n tₗ tᵣ)
-  
+
   -- data Right : Rel (Tree A key) b where
   --   right : ∀ {x n tₗ tᵣ} → Right tᵣ (node x n tₗ tᵣ)
 
@@ -273,6 +269,9 @@ module _ {A : Set b} {key : A → K} where
   popMin nil = nothing
   popMin (node x _ tₗ tᵣ) = just (x , merge tₗ tᵣ)
 
+  findMin : Tree A key → Maybe A
+  findMin = Maybe.map proj₁ ∘ popMin
+
   deleteMin : Tree A key → Maybe (Tree A key)
   deleteMin = Maybe.map proj₂ ∘ popMin
 
@@ -286,7 +285,7 @@ module _ {A : Set b} {key : A → K} where
   count⇒Acc-DeleteMin nil _ = acc λ _ ()
   count⇒Acc-DeleteMin {n = suc n} t@(node _ _ _ _) refl = acc λ t' t'<t →
     count⇒Acc-DeleteMin {n = n} t' (ℕ.+-cancelˡ-≡ 1 (DeleteMin⇒suc-on-count t'<t))
-  
+
   DeleteMin-wellFounded : WellFounded DeleteMin
   DeleteMin-wellFounded t = count⇒Acc-DeleteMin t refl
 
@@ -296,7 +295,7 @@ module _ {A : Set b} {key : A → K} where
 
   toList′-head : ∀ {x} {t : Tree A key} → ¬Null x t → (@0 rec : Acc DeleteMin t) → Head x (toList′ t rec)
   toList′-head ¬null (acc rs) = hd
-  
+
   toList′-sorted : ∀ {t : Tree A key} → Heap t → (@0 rec : Acc DeleteMin t) → Linked (_≤_ on key) (toList′ t rec)
   toList′-sorted heap-nil _ = []
   toList′-sorted (heap-node _ _ heap-nil heap-nil) (acc _) = [-]
