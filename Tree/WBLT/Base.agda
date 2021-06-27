@@ -32,10 +32,6 @@ module _ {a} {A : Set a} where
 
 open TotalOrder totalOrder renaming (Carrier to A) hiding (refl)
 
-private
-  variable
-    b : Level
-
 import Data.Tree.Binary as Binary
 
 Tree : Set a
@@ -116,6 +112,7 @@ merge′ t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rec) | inj₂ _ with merge′
 ... | inj₂ _ = node x₂ (suc (size tᵣ′ + size tₗ)) tᵣ′ tₗ
 
 open ≡-Reasoning
+
 merge′-count : ∀ (t₁ t₂ : Tree) → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → count (merge′ t₁ t₂ rec) ≡ count t₁ + count t₂
 merge′-count nil nil _ = refl
 merge′-count nil t@(node _ _ _ _) _ = refl
@@ -144,11 +141,9 @@ merge′-count t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rec) | inj₂ _ with me
   suc (count t₁ + (count tₗ + count tᵣ)) ≡˘⟨ ℕ.+-suc (count t₁) (count tₗ + count tᵣ) ⟩
   count t₁ + suc (count tₗ + count tᵣ) ∎
 ... | inj₂ _ = begin
-  suc (count tᵣ′ + count tₗ) ≡⟨ cong suc (ℕ.+-comm (count tᵣ′) (count tₗ)) ⟩
-  suc (count tₗ + count tᵣ′) ≡⟨ cong (suc ∘ (count tₗ +_)) count[tᵣ′]≡count[t₁]+count[tᵣ] ⟩
-  suc (count tₗ + (count t₁ + count tᵣ)) ≡˘⟨ cong suc (ℕ.+-assoc (count tₗ) (count t₁) (count tᵣ)) ⟩
-  suc ((count tₗ + count t₁) + count tᵣ) ≡⟨ cong (suc ∘ (_+ count tᵣ)) (ℕ.+-comm (count tₗ) (count t₁)) ⟩
-  suc ((count t₁ + count tₗ) + count tᵣ) ≡⟨ cong suc (ℕ.+-assoc (count t₁) (count tₗ) (count tᵣ)) ⟩
+  suc (count tᵣ′ + count tₗ) ≡⟨ cong (suc ∘ (_+ count tₗ)) count[tᵣ′]≡count[t₁]+count[tᵣ] ⟩
+  suc ((count t₁ + count tᵣ) + count tₗ) ≡⟨ cong suc (ℕ.+-assoc (count t₁) (count tᵣ) (count tₗ)) ⟩
+  suc (count t₁ + (count tᵣ + count tₗ)) ≡⟨ cong (suc ∘ (count t₁ +_)) (ℕ.+-comm (count tᵣ) (count tₗ)) ⟩
   suc (count t₁ + (count tₗ + count tᵣ)) ≡˘⟨ ℕ.+-suc (count t₁) (count tₗ + count tᵣ) ⟩
   count t₁ + suc (count tₗ + count tᵣ) ∎
 
