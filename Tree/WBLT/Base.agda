@@ -9,7 +9,7 @@ open import Data.Sum.Base
 open import Data.Maybe.Base as Maybe
 open import Data.Bool hiding (_≤_)
 open import Data.Nat.Base using (ℕ; zero; suc; _+_)
-open import Data.List hiding (null; merge)
+open import Data.List.Base hiding (null; merge)
 open import Data.List.Relation.Unary.Linked
 open import Relation.Nullary
 open import Relation.Unary
@@ -20,19 +20,11 @@ open import Induction.WellFounded
 
 import Data.Nat.Base as ℕ
 import Data.Nat.Properties as ℕ
+import Data.Tree.Binary as Binary
 
 module Tree.WBLT.Base {a ℓ₁ ℓ₂} (totalOrder : TotalOrder a ℓ₁ ℓ₂) where
 
-module _ {a} {A : Set a} where
-  data Head (x : A) : List A → Set a where
-    hd : ∀ {xs} → Head x (x ∷ xs)
-
-  Head⇒∷ : ∀ {ℓ} {R : Rel A ℓ} {x y xs} → (Head y xs) → R x y → Linked R xs → Linked R (x ∷ xs)
-  Head⇒∷ hd Rxy Rxs = Rxy ∷ Rxs
-
 open TotalOrder totalOrder renaming (Carrier to A) hiding (refl)
-
-import Data.Tree.Binary as Binary
 
 Tree : Set a
 Tree = Binary.Tree (A × ℕ) ⊤
@@ -271,7 +263,7 @@ DeleteMin⇒suc-on-count (delmin {tₗ = tₗ} {tᵣ = tᵣ}) = cong suc (merge-
 count⇒Acc-DeleteMin : ∀ {n} (t : Tree) → count t ≡ n → Acc DeleteMin t
 count⇒Acc-DeleteMin nil _ = acc λ _ ()
 count⇒Acc-DeleteMin {n = suc n} t@(node _ _ _ _) refl = acc λ t' t'<t →
-  count⇒Acc-DeleteMin {n = n} t' (ℕ.+-cancelˡ-≡ 1 (DeleteMin⇒suc-on-count t'<t))
+  count⇒Acc-DeleteMin {n = n} t' (ℕ.suc-injective (DeleteMin⇒suc-on-count t'<t))
 
 DeleteMin-wellFounded : WellFounded DeleteMin
 DeleteMin-wellFounded t = count⇒Acc-DeleteMin t refl
@@ -280,23 +272,26 @@ toList′ : ∀ (t : Tree) → (@0 rec : Acc DeleteMin t) → List A
 toList′ nil _ = []
 toList′ t@(node x _ tₗ tᵣ) (acc rs) = x ∷ toList′ (merge tₗ tᵣ) (rs _ delmin)
 
-toList′-head : ∀ {x} {t : Tree} → ¬Null x t → (@0 rec : Acc DeleteMin t) → Head x (toList′ t rec)
-toList′-head ¬null (acc rs) = hd
+toList′-head : ∀ {x} {t : Tree} → ¬Null x t → (@0 rec : Acc DeleteMin t) → ∃[ xs ] toList′ t rec ≡ x ∷ xs
+toList′-head ¬null (acc rs) = -, refl
+
+_[_]∷_ : ∀ {a ℓ} {A : Set a} {R : Rel A ℓ} {x y : A} {xs : List A} → R x y → ∃[ ys ] xs ≡ y ∷ ys → Linked R xs → Linked R (x ∷ xs)
+Rxy [ _ , refl ]∷  Rxs = Rxy ∷ Rxs
 
 toList′-sorted : ∀ {t : Tree} → Heap t → (@0 rec : Acc DeleteMin t) → Linked _≤_ (toList′ t rec)
 toList′-sorted heap-nil _ = []
 toList′-sorted (heap-node _ _ heap-nil heap-nil) (acc _) = [-]
 toList′-sorted {t = node x _ nil t@(node y _ _ _)}
                (heap-node _ (#-node x≤y) heap-nil h@(heap-node _ _ _ _)) (acc rs)
-  = Head⇒∷ (toList′-head ¬null (rs t delmin)) x≤y (toList′-sorted h (rs t delmin))
+  = x≤y [ toList′-head ¬null (rs t delmin) ]∷ toList′-sorted h (rs t delmin)
 toList′-sorted {t = node x _ t@(node y _ _ _) nil}
                (heap-node (#-node x≤y) _ h@(heap-node _ _ _ _) heap-nil) (acc rs)
-  = Head⇒∷ (toList′-head ¬null (rs t delmin)) x≤y (toList′-sorted h (rs t delmin))
+  = x≤y [ toList′-head ¬null (rs t delmin) ]∷ toList′-sorted h (rs t delmin)
 toList′-sorted {t = node x _ t₁@(node y₁ n₁ tₗ₁ tᵣ₁) t₂@(node y₂ n₂ tₗ₂ tᵣ₂)}
                (heap-node (#-node x≤y₁) (#-node x≤y₂) h₁@(heap-node _ _ _ _) h₂@(heap-node _ _ _ _)) (acc rs)
                with merge-¬null t₁ t₂ ¬null ¬null
-... | inj₁ nn = Head⇒∷ (toList′-head nn (rs (merge t₁ t₂) delmin)) x≤y₁ (toList′-sorted (merge-heap h₁ h₂) (rs _ delmin))
-... | inj₂ nn = Head⇒∷ (toList′-head nn (rs (merge t₁ t₂) delmin)) x≤y₂ (toList′-sorted (merge-heap h₁ h₂) (rs _ delmin))
+... | inj₁ nn = x≤y₁ [ toList′-head nn (rs (merge t₁ t₂) delmin) ]∷ toList′-sorted (merge-heap h₁ h₂) (rs _ delmin)
+... | inj₂ nn = x≤y₂ [ toList′-head nn (rs (merge t₁ t₂) delmin) ]∷ toList′-sorted (merge-heap h₁ h₂) (rs _ delmin)
 
 toList : Tree → List A
 toList t = toList′ t (DeleteMin-wellFounded _)
