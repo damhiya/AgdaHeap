@@ -10,7 +10,6 @@ open import Data.Maybe.Base as Maybe
 open import Data.Bool hiding (_≤_)
 open import Data.Nat.Base using (ℕ; zero; suc; _+_)
 open import Data.List.Base hiding (null; merge)
-open import Data.List.Relation.Unary.Linked
 open import Relation.Nullary
 open import Relation.Unary
 open import Relation.Binary.Core
@@ -105,6 +104,33 @@ merge′ t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rec) | inj₂ _ with merge′
 
 open ≡-Reasoning
 
+private
+  open import Data.Nat.Tactic.RingSolver
+
+  nat-lemma1 : ∀ x y z w → w ≡ y + z → suc (x + w) ≡ suc ((x + y) + z)
+  nat-lemma1 x y z w p = begin
+    suc (x + w)       ≡⟨ cong (suc ∘ (x +_)) p ⟩
+    suc (x + (y + z)) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
+    suc ((x + y) + z) ∎
+
+  nat-lemma2 : ∀ x y z w → w ≡ x + y → suc (w + z) ≡ suc ((z + x) + y)
+  nat-lemma2 x y z w p = begin
+    suc (w + z)       ≡⟨ cong (suc ∘ (_+ z)) p ⟩
+    suc ((x + y) + z) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
+    suc ((z + x) + y) ∎
+
+  nat-lemma3 : ∀ x y z w → w ≡ y + z → suc (x + w) ≡ y + suc (x + z)
+  nat-lemma3 x y z w p = begin
+    suc (x + w)       ≡⟨ cong (suc ∘ (x +_)) p ⟩
+    suc (x + (y + z)) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
+    y + suc (x + z)   ∎
+
+  nat-lemma4 : ∀ x y z w → w ≡ x + y → suc (w + z) ≡ x + suc (z + y)
+  nat-lemma4 x y z w p = begin
+    suc (w + z)       ≡⟨ cong (suc ∘ (_+ z)) p ⟩
+    suc ((x + y) + z) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
+    x + suc (z + y)   ∎
+
 merge′-count : ∀ (t₁ t₂ : Tree) → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → count (merge′ t₁ t₂ rec) ≡ count t₁ + count t₂
 merge′-count nil nil _ = refl
 merge′-count nil t@(node _ _ _ _) _ = refl
@@ -113,31 +139,13 @@ merge′-count t₁@(node x₁ _ _ _) h₂@(node x₂ _ _ _) _ with total x₁ x
 merge′-count t₁@(node x₁ n₁ tₗ tᵣ) t₂ (acc rec) | inj₁ _ with merge′ tᵣ t₂ (rec (tᵣ , t₂) lexˡ)
                                                             | merge′-count tᵣ t₂ (rec (tᵣ , t₂) lexˡ)
 ... | tᵣ′ | count[tᵣ′]≡count[tᵣ]+count[t₂] with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = begin
-  suc (count tₗ + count tᵣ′) ≡⟨ cong (suc ∘ (count tₗ +_)) count[tᵣ′]≡count[tᵣ]+count[t₂] ⟩
-  suc (count tₗ + (count tᵣ + count t₂)) ≡˘⟨ cong suc (ℕ.+-assoc (count tₗ) (count tᵣ) (count t₂)) ⟩
-  suc ((count tₗ + count tᵣ) + count t₂) ∎
-... | inj₂ _ = begin
-  suc (count tᵣ′ + count tₗ) ≡⟨ cong suc (ℕ.+-comm (count tᵣ′) (count tₗ)) ⟩
-  suc (count tₗ + count tᵣ′) ≡⟨ cong (suc ∘ (count tₗ +_)) count[tᵣ′]≡count[tᵣ]+count[t₂] ⟩
-  suc (count tₗ + (count tᵣ + count t₂)) ≡˘⟨ cong suc (ℕ.+-assoc (count tₗ) (count tᵣ) (count t₂)) ⟩
-  suc ((count tₗ + count tᵣ) + count t₂) ∎
+... | inj₁ _ = nat-lemma1 (count tₗ) (count tᵣ) (count t₂) (count tᵣ′) count[tᵣ′]≡count[tᵣ]+count[t₂]
+... | inj₂ _ = nat-lemma2 (count tᵣ) (count t₂) (count tₗ) (count tᵣ′) count[tᵣ′]≡count[tᵣ]+count[t₂]
 merge′-count t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rec) | inj₂ _ with merge′ t₁ tᵣ (rec (t₁ , tᵣ) lexʳ)
                                                             | merge′-count t₁ tᵣ (rec (t₁ , tᵣ) lexʳ)
 ... | tᵣ′ | count[tᵣ′]≡count[t₁]+count[tᵣ] with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = begin
-  suc (count tₗ + count tᵣ′) ≡⟨ cong (suc ∘ (count tₗ +_)) count[tᵣ′]≡count[t₁]+count[tᵣ] ⟩
-  suc (count tₗ + (count t₁ + count tᵣ)) ≡˘⟨ cong suc (ℕ.+-assoc (count tₗ) (count t₁) (count tᵣ)) ⟩
-  suc ((count tₗ + count t₁) + count tᵣ) ≡⟨ cong (suc ∘ (_+ count tᵣ)) (ℕ.+-comm (count tₗ) (count t₁)) ⟩
-  suc ((count t₁ + count tₗ) + count tᵣ) ≡⟨ cong suc (ℕ.+-assoc (count t₁) (count tₗ) (count tᵣ)) ⟩
-  suc (count t₁ + (count tₗ + count tᵣ)) ≡˘⟨ ℕ.+-suc (count t₁) (count tₗ + count tᵣ) ⟩
-  count t₁ + suc (count tₗ + count tᵣ) ∎
-... | inj₂ _ = begin
-  suc (count tᵣ′ + count tₗ) ≡⟨ cong (suc ∘ (_+ count tₗ)) count[tᵣ′]≡count[t₁]+count[tᵣ] ⟩
-  suc ((count t₁ + count tᵣ) + count tₗ) ≡⟨ cong suc (ℕ.+-assoc (count t₁) (count tᵣ) (count tₗ)) ⟩
-  suc (count t₁ + (count tᵣ + count tₗ)) ≡⟨ cong (suc ∘ (count t₁ +_)) (ℕ.+-comm (count tᵣ) (count tₗ)) ⟩
-  suc (count t₁ + (count tₗ + count tᵣ)) ≡˘⟨ ℕ.+-suc (count t₁) (count tₗ + count tᵣ) ⟩
-  count t₁ + suc (count tₗ + count tᵣ) ∎
+... | inj₁ _ = nat-lemma3 (count tₗ) (count t₁) (count tᵣ) (count tᵣ′) count[tᵣ′]≡count[t₁]+count[tᵣ]
+... | inj₂ _ = nat-lemma4 (count t₁) (count tᵣ) (count tₗ) (count tᵣ′) count[tᵣ′]≡count[t₁]+count[tᵣ]
 
 merge′-leftist : ∀ {t₁ t₂ : Tree} → Leftist t₁ → Leftist t₂ → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → Leftist (merge′ t₁ t₂ rec)
 merge′-leftist leftist-nil leftist-nil _ = leftist-nil
@@ -274,6 +282,8 @@ toList′ t@(node x _ tₗ tᵣ) (acc rs) = x ∷ toList′ (merge tₗ tᵣ) (r
 
 toList′-head : ∀ {x} {t : Tree} → ¬Null x t → (@0 rec : Acc DeleteMin t) → ∃[ xs ] toList′ t rec ≡ x ∷ xs
 toList′-head ¬null (acc rs) = -, refl
+
+open import Data.List.Relation.Unary.Linked
 
 _[_]∷_ : ∀ {a ℓ} {A : Set a} {R : Rel A ℓ} {x y : A} {xs : List A} → R x y → ∃[ ys ] xs ≡ y ∷ ys → Linked R xs → Linked R (x ∷ xs)
 Rxy [ _ , refl ]∷  Rxs = Rxy ∷ Rxs
