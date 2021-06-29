@@ -93,11 +93,11 @@ merge′ nil nil _ = nil
 merge′ nil t@(node _ _ _ _) _ = t
 merge′ t@(node _ _ _ _) nil _ = t
 merge′ t₁@(node x₁ _ _ _) h₂@(node x₂ _ _ _) _ with total x₁ x₂
-merge′ t₁@(node x₁ n₁ tₗ tᵣ) t₂ (acc rec) | inj₁ _ with merge′ tᵣ t₂ (rec (tᵣ , t₂) lexˡ)
+merge′ t₁@(node x₁ n₁ tₗ tᵣ) t₂ (acc rs) | inj₁ _ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
 ... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
 ... | inj₁ _ = node x₁ (suc (size tₗ + size tᵣ′)) tₗ tᵣ′
 ... | inj₂ _ = node x₁ (suc (size tᵣ′ + size tₗ)) tᵣ′ tₗ
-merge′ t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rec) | inj₂ _ with merge′ t₁ tᵣ (rec (t₁ , tᵣ) lexʳ)
+merge′ t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rs) | inj₂ _ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
 ... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
 ... | inj₁ _ = node x₂ (suc (size tₗ + size tᵣ′)) tₗ tᵣ′
 ... | inj₂ _ = node x₂ (suc (size tᵣ′ + size tₗ)) tᵣ′ tₗ
@@ -136,16 +136,16 @@ merge′-count nil nil _ = refl
 merge′-count nil t@(node _ _ _ _) _ = refl
 merge′-count t@(node _ _ tₗ tᵣ) nil _ = sym (ℕ.+-identityʳ (count t))
 merge′-count t₁@(node x₁ _ _ _) h₂@(node x₂ _ _ _) _ with total x₁ x₂
-merge′-count t₁@(node x₁ n₁ tₗ tᵣ) t₂ (acc rec) | inj₁ _ with merge′ tᵣ t₂ (rec (tᵣ , t₂) lexˡ)
-                                                            | merge′-count tᵣ t₂ (rec (tᵣ , t₂) lexˡ)
+merge′-count t₁@(node x₁ n₁ tₗ tᵣ) t₂ (acc rs) | inj₁ _ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
+                                                            | merge′-count tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
 ... | tᵣ′ | count[tᵣ′]≡count[tᵣ]+count[t₂] with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = nat-lemma1 (count tₗ) (count tᵣ) (count t₂) (count tᵣ′) count[tᵣ′]≡count[tᵣ]+count[t₂]
-... | inj₂ _ = nat-lemma2 (count tᵣ) (count t₂) (count tₗ) (count tᵣ′) count[tᵣ′]≡count[tᵣ]+count[t₂]
-merge′-count t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rec) | inj₂ _ with merge′ t₁ tᵣ (rec (t₁ , tᵣ) lexʳ)
-                                                            | merge′-count t₁ tᵣ (rec (t₁ , tᵣ) lexʳ)
+... | inj₁ _ = nat-lemma1 (count tₗ) (count tᵣ) (count t₂) _ count[tᵣ′]≡count[tᵣ]+count[t₂]
+... | inj₂ _ = nat-lemma2 (count tᵣ) (count t₂) (count tₗ) _ count[tᵣ′]≡count[tᵣ]+count[t₂]
+merge′-count t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rs) | inj₂ _ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
+                                                            | merge′-count t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
 ... | tᵣ′ | count[tᵣ′]≡count[t₁]+count[tᵣ] with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = nat-lemma3 (count tₗ) (count t₁) (count tᵣ) (count tᵣ′) count[tᵣ′]≡count[t₁]+count[tᵣ]
-... | inj₂ _ = nat-lemma4 (count t₁) (count tᵣ) (count tₗ) (count tᵣ′) count[tᵣ′]≡count[t₁]+count[tᵣ]
+... | inj₁ _ = nat-lemma3 (count tₗ) (count t₁) (count tᵣ) _ count[tᵣ′]≡count[t₁]+count[tᵣ]
+... | inj₂ _ = nat-lemma4 (count t₁) (count tᵣ) (count tₗ) _ count[tᵣ′]≡count[t₁]+count[tᵣ]
 
 merge′-leftist : ∀ {t₁ t₂ : Tree} → Leftist t₁ → Leftist t₂ → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → Leftist (merge′ t₁ t₂ rec)
 merge′-leftist leftist-nil leftist-nil _ = leftist-nil
@@ -154,15 +154,15 @@ merge′-leftist l₁@(leftist-node _ _ _ _) leftist-nil _ = l₁
 merge′-leftist {t₁ = node x₁ _ _ _} {t₂ = node x₂ _ _ _} (leftist-node _ _ _ _) (leftist-node _ _ _ _) _ with total x₁ x₂
 merge′-leftist
   {t₁ = t₁@(node x₁ n₁ tₗ tᵣ)} {t₂ = t₂}
-  (leftist-node _ _ lₗ lᵣ) l₂ (acc rec)
-  | inj₁ _ with merge′ tᵣ t₂ (rec (tᵣ , t₂) lexˡ) | merge′-leftist lᵣ l₂ (rec (tᵣ , t₂) lexˡ)
+  (leftist-node _ _ lₗ lᵣ) l₂ (acc rs)
+  | inj₁ _ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ) | merge′-leftist lᵣ l₂ (rs (tᵣ , t₂) lexˡ)
 ... | tᵣ′ | lᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
 ... | inj₁ size[tₗ]≥size[tᵣ′] = leftist-node refl size[tₗ]≥size[tᵣ′] lₗ lᵣ′
 ... | inj₂ size[tᵣ′]≥size[tₗ] = leftist-node refl size[tᵣ′]≥size[tₗ] lᵣ′ lₗ
 merge′-leftist
   {t₁ = t₁} {t₂ = t₂@(node x₂ n₂ tₗ tᵣ)}
-  l₁ (leftist-node _ _ lₗ lᵣ) (acc rec)
-  | inj₂ _ with merge′ t₁ tᵣ (rec (t₁ , tᵣ) lexʳ) | merge′-leftist l₁ lᵣ (rec (t₁ , tᵣ) lexʳ)
+  l₁ (leftist-node _ _ lₗ lᵣ) (acc rs)
+  | inj₂ _ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ) | merge′-leftist l₁ lᵣ (rs (t₁ , tᵣ) lexʳ)
 ... | tᵣ′ | lᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
 ... | inj₁ size[tₗ]≥size[tᵣ′] = leftist-node refl size[tₗ]≥size[tᵣ′] lₗ lᵣ′
 ... | inj₂ size[tᵣ′]≥size[tₗ] = leftist-node refl size[tᵣ′]≥size[tₗ] lᵣ′ lₗ
@@ -181,15 +181,15 @@ merge′-# k#t₁@(#-node _) #-nil _ = k#t₁
 merge′-# {t₁ = node x₁ _ _ _} {t₂ = node x₂ _ _ _} (#-node _) (#-node _) _ with total x₁ x₂
 merge′-#
   {t₁ = t₁@(node x₁ n₁ tₗ tᵣ)} {t₂ = t₂}
-  (#-node k≤k₁) _ (acc rec)
-  | inj₁ k₁≤k₂ with merge′ tᵣ t₂ (rec (tᵣ , t₂) lexˡ)
+  (#-node k≤k₁) _ (acc rs)
+  | inj₁ k₁≤k₂ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
 ... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
 ... | inj₁ _ = #-node k≤k₁
 ... | inj₂ _ = #-node k≤k₁
 merge′-#
   {t₁ = t₁} {t₂@(node x₂ n₂ tₗ tᵣ)}
-  _ (#-node k≤k₂) (acc rec)
-  | inj₂ k₂≤k₁ with merge′ t₁ tᵣ (rec (t₁ , tᵣ) lexʳ)
+  _ (#-node k≤k₂) (acc rs)
+  | inj₂ k₂≤k₁ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
 ... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
 ... | inj₁ _ = #-node k≤k₂
 ... | inj₂ _ = #-node k≤k₂
@@ -201,19 +201,19 @@ merge′-heap h₁@(heap-node _ _ _ _) heap-nil _ = h₁
 merge′-heap {t₁ = node x₁ _ _ _} {t₂ = node x₂ _ _ _} (heap-node _ _ _ _) (heap-node _ _ _ _) _ with total x₁ x₂
 merge′-heap
   {t₁ = t₁@(node x₁ n₁ tₗ tᵣ)} {t₂ = t₂}
-  (heap-node k₁#tₗ k₁#tᵣ hₗ hᵣ) h₂ (acc rec)
-  | inj₁ k₁≤k₂ with merge′ tᵣ t₂ (rec (tᵣ , t₂) lexˡ)
-                  | merge′-heap hᵣ h₂ (rec (tᵣ , t₂) lexˡ)
-                  | merge′-# k₁#tᵣ (#-node k₁≤k₂) (rec (tᵣ , t₂) lexˡ)
+  (heap-node k₁#tₗ k₁#tᵣ hₗ hᵣ) h₂ (acc rs)
+  | inj₁ k₁≤k₂ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
+                  | merge′-heap hᵣ h₂ (rs (tᵣ , t₂) lexˡ)
+                  | merge′-# k₁#tᵣ (#-node k₁≤k₂) (rs (tᵣ , t₂) lexˡ)
 ... | tᵣ′ | hᵣ′ | k₁#tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
 ... | inj₁ _ = heap-node k₁#tₗ k₁#tᵣ′ hₗ hᵣ′
 ... | inj₂ _ = heap-node k₁#tᵣ′ k₁#tₗ hᵣ′ hₗ
 merge′-heap
   {t₁ = t₁} {t₂@(node x₂ n₂ tₗ tᵣ)}
-  h₁ (heap-node k₂#tₗ k₂#tᵣ hₗ hᵣ) (acc rec)
-  | inj₂ k₂≤k₁ with merge′ t₁ tᵣ (rec (t₁ , tᵣ) lexʳ)
-                  | merge′-heap h₁ hᵣ (rec (t₁ , tᵣ) lexʳ)
-                  | merge′-# (#-node k₂≤k₁) k₂#tᵣ (rec (t₁ , tᵣ) lexʳ)
+  h₁ (heap-node k₂#tₗ k₂#tᵣ hₗ hᵣ) (acc rs)
+  | inj₂ k₂≤k₁ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
+                  | merge′-heap h₁ hᵣ (rs (t₁ , tᵣ) lexʳ)
+                  | merge′-# (#-node k₂≤k₁) k₂#tᵣ (rs (t₁ , tᵣ) lexʳ)
 ... | tᵣ′ | hᵣ′ | k₂#tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
 ... | inj₁ _ = heap-node k₂#tₗ k₂#tᵣ′ hₗ hᵣ′
 ... | inj₂ _ = heap-node k₂#tᵣ′ k₂#tₗ hᵣ′ hₗ
