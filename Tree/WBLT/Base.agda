@@ -286,7 +286,7 @@ toList′-head ¬null (acc rs) = -, refl
 open import Data.List.Relation.Unary.Linked
 
 _[_]∷_ : ∀ {a ℓ} {A : Set a} {R : Rel A ℓ} {x y : A} {xs : List A} → R x y → ∃[ ys ] xs ≡ y ∷ ys → Linked R xs → Linked R (x ∷ xs)
-Rxy [ _ , refl ]∷  Rxs = Rxy ∷ Rxs
+Rxy [ _ , refl ]∷ Rxs = Rxy ∷ Rxs
 
 toList′-sorted : ∀ {t : Tree} → Heap t → (@0 rec : Acc DeleteMin t) → Linked _≤_ (toList′ t rec)
 toList′-sorted heap-nil _ = []

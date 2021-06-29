@@ -17,7 +17,7 @@ open import Relation.Binary.PropositionalEquality.Core
 import Data.Nat.Base as ℕ
 import Data.Nat.Properties as ℕ
 
-open TotalOrder totalOrder renaming (Carrier to K) hiding (refl)
+open TotalOrder totalOrder renaming (Carrier to A) hiding (refl)
 import Tree.WBLT.Base totalOrder as Tree
 open Tree using
   ( Tree; nil; node
@@ -27,67 +27,61 @@ open Tree using
   ; merge; merge-leftist; merge-heap
   )
 
-private
-  variable
-    b : Level
-
-module _ (A : Set b) (key : A → K) where
-  record WBLT : Set (b ⊔ ℓ₂) where
-    field
-      tree : Tree A key
-      @0 leftist : Leftist {key = key} tree
-      @0 heap : Heap {key = key} tree
+record WBLT : Set (a ⊔ ℓ₂) where
+  field
+    tree : Tree
+    @0 leftist : Leftist tree
+    @0 heap : Heap tree
 
 open WBLT
 
-module PQueue {A : Set b} {key : A → K} where
-  meld : WBLT A key → WBLT A key → WBLT A key
-  meld wblt₁ wblt₂ = record
-    { tree = merge {key = key} (tree wblt₁) (tree wblt₂)
-    ; leftist = merge-leftist {key = key} (leftist wblt₁) (leftist wblt₂)
-    ; heap = merge-heap {key = key} (heap wblt₁) (heap wblt₂)
-    }
+meld : WBLT → WBLT → WBLT
+meld wblt₁ wblt₂ = record
+  { tree = merge (tree wblt₁) (tree wblt₂)
+  ; leftist = merge-leftist (leftist wblt₁) (leftist wblt₂)
+  ; heap = merge-heap (heap wblt₁) (heap wblt₂)
+  }
 
-  size : WBLT A key → ℕ
-  size wblt = Tree.size {key = key} (tree wblt)
+size : WBLT → ℕ
+size wblt = Tree.size (tree wblt)
 
-  null : WBLT A key → Bool
-  null wblt = Tree.null {key = key} (tree wblt)
+null : WBLT → Bool
+null wblt = Tree.null (tree wblt)
 
-  empty : WBLT A key
-  empty = record
-    { tree = nil
-    ; leftist = leftist-nil
-    ; heap = heap-nil
-    }
+empty : WBLT
+empty = record
+  { tree = nil
+  ; leftist = leftist-nil
+  ; heap = heap-nil
+  }
 
-  singleton : A → WBLT A key
-  singleton x = record
-    { tree = node x 1 nil nil
-    ; leftist = leftist-node refl ℕ.z≤n leftist-nil leftist-nil
-    ; heap = heap-node #-nil #-nil heap-nil heap-nil
-    }
+singleton : A → WBLT
+singleton x = record
+  { tree = node x 1 nil nil
+  ; leftist = leftist-node refl ℕ.z≤n leftist-nil leftist-nil
+  ; heap = heap-node #-nil #-nil heap-nil heap-nil
+  }
 
-  insert : A → WBLT A key → WBLT A key
-  insert x wblt = meld wblt (singleton x)
+insert : A → WBLT → WBLT
+insert x wblt = meld wblt (singleton x)
 
-  popMin : WBLT A key → Maybe (A × WBLT A key)
-  popMin record {tree = nil} = nothing
-  popMin record
-    { tree = node x _ tₗ tᵣ
-    ; leftist = leftist-node _ _ lₗ lᵣ
-    ; heap = heap-node _ _ hₗ hᵣ
-    } = just (x , record
-      { tree = merge tₗ tᵣ
-      ; leftist = merge-leftist lₗ lᵣ
-      ; heap = merge-heap hₗ hᵣ
-      })
+popMin : WBLT → Maybe (A × WBLT)
+popMin record {tree = nil} = nothing
+popMin record
+  { tree = node x _ tₗ tᵣ
+  ; leftist = leftist-node _ _ lₗ lᵣ
+  ; heap = heap-node _ _ hₗ hᵣ
+  } = just (x , record
+    { tree = merge tₗ tᵣ
+    ; leftist = merge-leftist lₗ lᵣ
+    ; heap = merge-heap hₗ hᵣ
+    })
 
-  findMin : WBLT A key → Maybe A
-  findMin wblt = Tree.findMin {key = key} (tree wblt)
+findMin : WBLT → Maybe A
+findMin wblt = Tree.findMin (tree wblt)
 
-  deleteMin : WBLT A key → Maybe (WBLT A key)
-  deleteMin = Maybe.map proj₂ ∘ popMin
+deleteMin : WBLT → Maybe WBLT
+deleteMin = Maybe.map proj₂ ∘ popMin
 
-  toList : WBLT A key → List A
-  toList wblt = Tree.toList {key = key} (tree wblt)
+toList : WBLT → List A
+toList wblt = Tree.toList (tree wblt)
