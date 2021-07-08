@@ -3,7 +3,6 @@
 open import Level using (Level; _⊔_; 0ℓ)
 open import Function.Base
 open import Data.Product
-open import Data.Product.Relation.Binary.Lex.Strict
 open import Data.Unit.Base using (⊤; tt)
 open import Data.Sum.Base
 open import Data.Maybe.Base as Maybe
@@ -46,8 +45,8 @@ null (node _ _ _ _) = false
 data Leftist : Tree → Set a where
   leftist-nil : Leftist nil
   leftist-node : ∀ {x n tₗ tᵣ} →
-                   n ≡ suc (size tₗ + size tᵣ) →
-                   size tₗ ℕ.≥ size tᵣ →
+                   n ≡ suc (count tₗ + count tᵣ) →
+                   count tₗ ℕ.≥ count tᵣ →
                    Leftist tₗ →
                    Leftist tᵣ →
                    Leftist (node x n tₗ tᵣ)
@@ -67,190 +66,152 @@ data Heap : Tree → Set (a ⊔ ℓ₂) where
 
 Leftist⇒size≡count : ∀ {t : Tree} → Leftist t → size t ≡ count t
 Leftist⇒size≡count leftist-nil = refl
-Leftist⇒size≡count (leftist-node {n = n} n≡1+size[tₗ]+size[tᵣ] _ lₗ lᵣ) =
-  subst₂ (((n ≡_) ∘ suc) ∘₂ _+_) (Leftist⇒size≡count lₗ) (Leftist⇒size≡count lᵣ) n≡1+size[tₗ]+size[tᵣ]
+Leftist⇒size≡count (leftist-node size≡count _ _ _) = size≡count
 
 data ¬Null (x : A) : Tree → Set a where
   ¬null : ∀ {n tₗ tᵣ} → ¬Null x (node x n tₗ tᵣ)
 
-data Right : Rel Tree a where
-  right : ∀ {x n tₗ tᵣ} → Right tᵣ (node x n tₗ tᵣ)
-
-Right-wellFounded : WellFounded Right
-Right-wellFounded t = acc λ {tᵣ right → Right-wellFounded tᵣ}
-
-_≺ₗₑₓ_ : Rel (Tree × Tree) a
-_≺ₗₑₓ_ = ×-Lex _≡_ Right Right
-
-≺ₗₑₓ-wellFounded : WellFounded _≺ₗₑₓ_
-≺ₗₑₓ-wellFounded = ×-wellFounded Right-wellFounded Right-wellFounded
-
-pattern lexˡ = inj₁ right
-pattern lexʳ = inj₂ (refl , right)
-
-merge′ : ∀ (t₁ t₂ : Tree) → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → Tree
-merge′ nil nil _ = nil
-merge′ nil t@(node _ _ _ _) _ = t
-merge′ t@(node _ _ _ _) nil _ = t
-merge′ t₁@(node x₁ _ _ _) h₂@(node x₂ _ _ _) _ with total x₁ x₂
-merge′ t₁@(node x₁ n₁ tₗ tᵣ) t₂ (acc rs) | inj₁ _ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
-... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = node x₁ (suc (size tₗ + size tᵣ′)) tₗ tᵣ′
-... | inj₂ _ = node x₁ (suc (size tᵣ′ + size tₗ)) tᵣ′ tₗ
-merge′ t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rs) | inj₂ _ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
-... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = node x₂ (suc (size tₗ + size tᵣ′)) tₗ tᵣ′
-... | inj₂ _ = node x₂ (suc (size tᵣ′ + size tₗ)) tᵣ′ tₗ
+merge : Tree → Tree → Tree
+merge nil nil = nil
+merge nil t@(node _ _ _ _) = t
+merge t@(node _ _ _ _) nil = t
+merge t₁@(node x₁ n₁ tₗ₁ tᵣ₁) t₂@(node x₂ n₂ tₗ₂ tᵣ₂) =
+  [ const (aux x₁ tₗ₁ (merge tᵣ₁ t₂))
+  , const (aux x₂ tₗ₂ (merge t₁ tᵣ₂))
+  ]′ (total x₁ x₂)
+  where
+    aux : A → Tree → Tree → Tree
+    aux x t₁ t₂ with ℕ.≤-total (size t₂) (size t₁)
+    ... | inj₁ _ = node x (suc (size t₁ + size t₂)) t₁ t₂
+    ... | inj₂ _ = node x (suc (size t₂ + size t₁)) t₂ t₁
 
 open ≡-Reasoning
-
 private
   open import Data.Nat.Tactic.RingSolver
 
-  nat-lemma1 : ∀ x y z w → w ≡ y + z → suc (x + w) ≡ suc ((x + y) + z)
-  nat-lemma1 x y z w p = begin
+  nat-lemma₁ : ∀ x y z w → w ≡ y + z → suc (x + w) ≡ suc ((x + y) + z)
+  nat-lemma₁ x y z w p = begin
     suc (x + w)       ≡⟨ cong (suc ∘ (x +_)) p ⟩
     suc (x + (y + z)) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
     suc ((x + y) + z) ∎
 
-  nat-lemma2 : ∀ x y z w → w ≡ x + y → suc (w + z) ≡ suc ((z + x) + y)
-  nat-lemma2 x y z w p = begin
+  nat-lemma₂ : ∀ x y z w → w ≡ x + y → suc (w + z) ≡ suc ((z + x) + y)
+  nat-lemma₂ x y z w p = begin
     suc (w + z)       ≡⟨ cong (suc ∘ (_+ z)) p ⟩
     suc ((x + y) + z) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
     suc ((z + x) + y) ∎
 
-  nat-lemma3 : ∀ x y z w → w ≡ y + z → suc (x + w) ≡ y + suc (x + z)
-  nat-lemma3 x y z w p = begin
+  nat-lemma₃ : ∀ x y z w → w ≡ y + z → suc (x + w) ≡ y + suc (x + z)
+  nat-lemma₃ x y z w p = begin
     suc (x + w)       ≡⟨ cong (suc ∘ (x +_)) p ⟩
     suc (x + (y + z)) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
     y + suc (x + z)   ∎
 
-  nat-lemma4 : ∀ x y z w → w ≡ x + y → suc (w + z) ≡ x + suc (z + y)
-  nat-lemma4 x y z w p = begin
+  nat-lemma₄ : ∀ x y z w → w ≡ x + y → suc (w + z) ≡ x + suc (z + y)
+  nat-lemma₄ x y z w p = begin
     suc (w + z)       ≡⟨ cong (suc ∘ (_+ z)) p ⟩
     suc ((x + y) + z) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
     x + suc (z + y)   ∎
 
-merge′-count : ∀ (t₁ t₂ : Tree) → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → count (merge′ t₁ t₂ rec) ≡ count t₁ + count t₂
-merge′-count nil nil _ = refl
-merge′-count nil t@(node _ _ _ _) _ = refl
-merge′-count t@(node _ _ tₗ tᵣ) nil _ = sym (ℕ.+-identityʳ (count t))
-merge′-count t₁@(node x₁ _ _ _) h₂@(node x₂ _ _ _) _ with total x₁ x₂
-merge′-count t₁@(node x₁ n₁ tₗ tᵣ) t₂ (acc rs) | inj₁ _ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
-                                                            | merge′-count tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
-... | tᵣ′ | count[tᵣ′]≡count[tᵣ]+count[t₂] with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = nat-lemma1 (count tₗ) (count tᵣ) (count t₂) _ count[tᵣ′]≡count[tᵣ]+count[t₂]
-... | inj₂ _ = nat-lemma2 (count tᵣ) (count t₂) (count tₗ) _ count[tᵣ′]≡count[tᵣ]+count[t₂]
-merge′-count t₁ t₂@(node x₂ n₂ tₗ tᵣ) (acc rs) | inj₂ _ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
-                                                            | merge′-count t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
-... | tᵣ′ | count[tᵣ′]≡count[t₁]+count[tᵣ] with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = nat-lemma3 (count tₗ) (count t₁) (count tᵣ) _ count[tᵣ′]≡count[t₁]+count[tᵣ]
-... | inj₂ _ = nat-lemma4 (count t₁) (count tᵣ) (count tₗ) _ count[tᵣ′]≡count[t₁]+count[tᵣ]
+merge-count : ∀ (t₁ t₂ : Tree) → count (merge t₁ t₂) ≡ count t₁ + count t₂
+merge-count nil nil = refl
+merge-count nil t@(node _ _ _ _) = refl
+merge-count t@(node _ _ _ _) nil = sym (ℕ.+-identityʳ (count t))
+merge-count t₁@(node x₁ n₁ tₗ₁ tᵣ₁) t₂@(node x₂ n₂ tₗ₂ tᵣ₂)
+  = aux (merge-count tᵣ₁ t₂) (merge-count t₁ tᵣ₂)
+  where
+    aux : count (merge tᵣ₁ t₂ ) ≡ count tᵣ₁ + count t₂ →
+          count (merge t₁  tᵣ₂) ≡ count t₁  + count tᵣ₂ →
+          count (merge t₁  t₂ ) ≡ count t₁  + count t₂
+    aux with total x₁ x₂
+    aux | inj₁ _ with ℕ.≤-total (size (merge tᵣ₁ t₂)) (size tₗ₁)
+    ...          | inj₁ _ = λ p _ → nat-lemma₁ (count tₗ₁) (count tᵣ₁) (count t₂) _ p
+    ...          | inj₂ _ = λ p _ → nat-lemma₂ (count tᵣ₁) (count t₂) (count tₗ₁) _ p
+    aux | inj₂ _ with ℕ.≤-total (size (merge t₁ tᵣ₂)) (size tₗ₂)
+    ...          | inj₁ _ = λ _ p → nat-lemma₃ (count tₗ₂) (count t₁) (count tᵣ₂) _ p
+    ...          | inj₂ _ = λ _ p → nat-lemma₄ (count t₁) (count tᵣ₂) (count tₗ₂) _ p
 
-merge′-leftist : ∀ {t₁ t₂ : Tree} → Leftist t₁ → Leftist t₂ → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → Leftist (merge′ t₁ t₂ rec)
-merge′-leftist leftist-nil leftist-nil _ = leftist-nil
-merge′-leftist leftist-nil l₂@(leftist-node _ _ _ _) _ = l₂
-merge′-leftist l₁@(leftist-node _ _ _ _) leftist-nil _ = l₁
-merge′-leftist {t₁ = node x₁ _ _ _} {t₂ = node x₂ _ _ _} (leftist-node _ _ _ _) (leftist-node _ _ _ _) _ with total x₁ x₂
-merge′-leftist
-  {t₁ = t₁@(node x₁ n₁ tₗ tᵣ)} {t₂ = t₂}
-  (leftist-node _ _ lₗ lᵣ) l₂ (acc rs)
-  | inj₁ _ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ) | merge′-leftist lᵣ l₂ (rs (tᵣ , t₂) lexˡ)
-... | tᵣ′ | lᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ size[tₗ]≥size[tᵣ′] = leftist-node refl size[tₗ]≥size[tᵣ′] lₗ lᵣ′
-... | inj₂ size[tᵣ′]≥size[tₗ] = leftist-node refl size[tᵣ′]≥size[tₗ] lᵣ′ lₗ
-merge′-leftist
-  {t₁ = t₁} {t₂ = t₂@(node x₂ n₂ tₗ tᵣ)}
-  l₁ (leftist-node _ _ lₗ lᵣ) (acc rs)
-  | inj₂ _ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ) | merge′-leftist l₁ lᵣ (rs (t₁ , tᵣ) lexʳ)
-... | tᵣ′ | lᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ size[tₗ]≥size[tᵣ′] = leftist-node refl size[tₗ]≥size[tᵣ′] lₗ lᵣ′
-... | inj₂ size[tᵣ′]≥size[tₗ] = leftist-node refl size[tᵣ′]≥size[tₗ] lᵣ′ lₗ
+merge-leftist : ∀ {t₁ t₂ : Tree} → Leftist t₁ → Leftist t₂ → Leftist (merge t₁ t₂)
+merge-leftist leftist-nil leftist-nil = leftist-nil
+merge-leftist leftist-nil l₂@(leftist-node _ _ _ _) = l₂
+merge-leftist l₁@(leftist-node _ _ _ _) leftist-nil = l₁
+merge-leftist {t₁ = t₁@(node x₁ n₁ tₗ₁ tᵣ₁)} {t₂ = t₂@(node x₂ n₂ tₗ₂ tᵣ₂)}
+               l₁@(leftist-node _ _ lₗ₁ lᵣ₁)  l₂@(leftist-node _ _ lₗ₂ lᵣ₂)
+  = aux (merge-leftist lᵣ₁ l₂) (merge-leftist l₁ lᵣ₂)
+  where
+    aux : Leftist (merge tᵣ₁ t₂) → Leftist (merge t₁ tᵣ₂) → Leftist (merge t₁ t₂)
+    aux with total x₁ x₂
+    aux | inj₁ _ with ℕ.≤-total (size (merge tᵣ₁ t₂)) (size tₗ₁)
+    ... | inj₁ [tₗ₁]≥[tᵣ′] = λ lᵣ′ _ → leftist-node
+          (cong₂ (suc ∘₂ _+_) (Leftist⇒size≡count lₗ₁) (Leftist⇒size≡count lᵣ′))
+          (subst₂ ℕ._≥_       (Leftist⇒size≡count lₗ₁) (Leftist⇒size≡count lᵣ′) [tₗ₁]≥[tᵣ′])
+          lₗ₁ lᵣ′
+    ... | inj₂ [tᵣ′]≥[tₗ₁] = λ lᵣ′ _ → leftist-node
+          (cong₂ (suc ∘₂ _+_) (Leftist⇒size≡count lᵣ′) (Leftist⇒size≡count lₗ₁))
+          (subst₂ ℕ._≥_       (Leftist⇒size≡count lᵣ′) (Leftist⇒size≡count lₗ₁) [tᵣ′]≥[tₗ₁])
+          lᵣ′ lₗ₁
+    aux | inj₂ _ with ℕ.≤-total (size (merge t₁ tᵣ₂)) (size tₗ₂)
+    ... | inj₁ [tₗ₂]≥[tᵣ′] = λ _ lᵣ′ → leftist-node
+          (cong₂ (suc ∘₂ _+_) (Leftist⇒size≡count lₗ₂) (Leftist⇒size≡count lᵣ′))
+          (subst₂ ℕ._≥_       (Leftist⇒size≡count lₗ₂) (Leftist⇒size≡count lᵣ′) [tₗ₂]≥[tᵣ′])
+          lₗ₂ lᵣ′
+    ... | inj₂ [tᵣ′]≥[tₗ₂] = λ _ lᵣ′ → leftist-node
+          (cong₂ (suc ∘₂ _+_) (Leftist⇒size≡count lᵣ′) (Leftist⇒size≡count lₗ₂))
+          (subst₂ ℕ._≥_       (Leftist⇒size≡count lᵣ′) (Leftist⇒size≡count lₗ₂) [tᵣ′]≥[tₗ₂])
+          lᵣ′ lₗ₂
 
-merge′-size : ∀ {t₁ t₂ : Tree} → Leftist t₁ → Leftist t₂ → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → size (merge′ t₁ t₂ rec) ≡ size t₁ + size t₂
-merge′-size {t₁ = t₁} {t₂ = t₂} l₁ l₂ rec = begin
-  size (merge′ t₁ t₂ rec) ≡⟨ Leftist⇒size≡count (merge′-leftist l₁ l₂ rec) ⟩
-  count (merge′ t₁ t₂ rec) ≡⟨ merge′-count t₁ t₂ rec ⟩
+merge-size : ∀ {t₁ t₂ : Tree} → Leftist t₁ → Leftist t₂ → size (merge t₁ t₂) ≡ size t₁ + size t₂
+merge-size {t₁ = t₁} {t₂ = t₂} l₁ l₂ = begin
+  size (merge t₁ t₂)  ≡⟨ Leftist⇒size≡count (merge-leftist l₁ l₂) ⟩
+  count (merge t₁ t₂) ≡⟨ merge-count t₁ t₂ ⟩
   count t₁ + count t₂ ≡˘⟨ cong₂ _+_ (Leftist⇒size≡count l₁) (Leftist⇒size≡count l₂) ⟩
   size t₁ + size t₂ ∎
 
-merge′-# : ∀ {k : A} {t₁ t₂ : Tree} → k # t₁ → k # t₂ → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → k # (merge′ t₁ t₂ rec)
-merge′-# #-nil #-nil _ = #-nil
-merge′-# #-nil k#t₂@(#-node _) _ = k#t₂
-merge′-# k#t₁@(#-node _) #-nil _ = k#t₁
-merge′-# {t₁ = node x₁ _ _ _} {t₂ = node x₂ _ _ _} (#-node _) (#-node _) _ with total x₁ x₂
-merge′-#
-  {t₁ = t₁@(node x₁ n₁ tₗ tᵣ)} {t₂ = t₂}
-  (#-node k≤k₁) _ (acc rs)
-  | inj₁ k₁≤k₂ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
-... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = #-node k≤k₁
-... | inj₂ _ = #-node k≤k₁
-merge′-#
-  {t₁ = t₁} {t₂@(node x₂ n₂ tₗ tᵣ)}
-  _ (#-node k≤k₂) (acc rs)
-  | inj₂ k₂≤k₁ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
-... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = #-node k≤k₂
-... | inj₂ _ = #-node k≤k₂
-
-merge′-heap : ∀ {t₁ t₂ : Tree} → Heap t₁ → Heap t₂ → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → Heap (merge′ t₁ t₂ rec)
-merge′-heap heap-nil heap-nil _ = heap-nil
-merge′-heap heap-nil h₂@(heap-node _ _ _ _) _ = h₂
-merge′-heap h₁@(heap-node _ _ _ _) heap-nil _ = h₁
-merge′-heap {t₁ = node x₁ _ _ _} {t₂ = node x₂ _ _ _} (heap-node _ _ _ _) (heap-node _ _ _ _) _ with total x₁ x₂
-merge′-heap
-  {t₁ = t₁@(node x₁ n₁ tₗ tᵣ)} {t₂ = t₂}
-  (heap-node k₁#tₗ k₁#tᵣ hₗ hᵣ) h₂ (acc rs)
-  | inj₁ k₁≤k₂ with merge′ tᵣ t₂ (rs (tᵣ , t₂) lexˡ)
-                  | merge′-heap hᵣ h₂ (rs (tᵣ , t₂) lexˡ)
-                  | merge′-# k₁#tᵣ (#-node k₁≤k₂) (rs (tᵣ , t₂) lexˡ)
-... | tᵣ′ | hᵣ′ | k₁#tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = heap-node k₁#tₗ k₁#tᵣ′ hₗ hᵣ′
-... | inj₂ _ = heap-node k₁#tᵣ′ k₁#tₗ hᵣ′ hₗ
-merge′-heap
-  {t₁ = t₁} {t₂@(node x₂ n₂ tₗ tᵣ)}
-  h₁ (heap-node k₂#tₗ k₂#tᵣ hₗ hᵣ) (acc rs)
-  | inj₂ k₂≤k₁ with merge′ t₁ tᵣ (rs (t₁ , tᵣ) lexʳ)
-                  | merge′-heap h₁ hᵣ (rs (t₁ , tᵣ) lexʳ)
-                  | merge′-# (#-node k₂≤k₁) k₂#tᵣ (rs (t₁ , tᵣ) lexʳ)
-... | tᵣ′ | hᵣ′ | k₂#tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ)
-... | inj₁ _ = heap-node k₂#tₗ k₂#tᵣ′ hₗ hᵣ′
-... | inj₂ _ = heap-node k₂#tᵣ′ k₂#tₗ hᵣ′ hₗ
-
-merge : Tree → Tree → Tree
-merge t₁ t₂ = merge′ t₁ t₂ (≺ₗₑₓ-wellFounded _)
-
-merge-count : ∀ (t₁ t₂ : Tree) → count (merge t₁ t₂) ≡ count t₁ + count t₂
-merge-count t₁ t₂ = merge′-count t₁ t₂ (≺ₗₑₓ-wellFounded _)
-
-merge-leftist : ∀ {t₁ t₂ : Tree} → Leftist t₁ → Leftist t₂ → Leftist (merge t₁ t₂)
-merge-leftist l₁ l₂ = merge′-leftist l₁ l₂ (≺ₗₑₓ-wellFounded _)
-
-merge-size : ∀ {t₁ t₂ : Tree} → Leftist t₁ → Leftist t₂ → size (merge t₁ t₂) ≡ size t₁ + size t₂
-merge-size l₁ l₂ = merge′-size l₁ l₂ (≺ₗₑₓ-wellFounded _)
-
-merge-# : ∀ {k : A} {t₁ t₂ : Tree} → k # t₁ → k # t₂ → k # merge t₁ t₂
-merge-# k#t₁ k#t₂ = merge′-# k#t₁ k#t₂ (≺ₗₑₓ-wellFounded _)
+merge-# : ∀ {x : A} {t₁ t₂ : Tree} → x # t₁ → x # t₂ → x # merge t₁ t₂
+merge-# #-nil #-nil = #-nil
+merge-# #-nil x#t₂@(#-node _) = x#t₂
+merge-# x#t₁@(#-node _) #-nil = x#t₁
+merge-# {x = x} {t₁ = t₁@(node x₁ n₁ tₗ₁ tᵣ₁)} {t₂ = t₂@(node x₂ n₂ tₗ₂ tᵣ₂)}
+                (#-node x≤x₁)                  (#-node x≤x₂)
+  = aux
+  where
+    aux : x # merge t₁ t₂
+    aux with total x₁ x₂
+    aux | inj₁ _ with ℕ.≤-total (size (merge tᵣ₁ t₂)) (size tₗ₁)
+    ... | inj₁ _ = #-node x≤x₁
+    ... | inj₂ _ = #-node x≤x₁
+    aux | inj₂ _ with ℕ.≤-total (size (merge t₁ tᵣ₂)) (size tₗ₂)
+    ... | inj₁ _ = #-node x≤x₂
+    ... | inj₂ _ = #-node x≤x₂
 
 merge-heap : ∀ {t₁ t₂ : Tree} → Heap t₁ → Heap t₂ → Heap (merge t₁ t₂)
-merge-heap h₁ h₂ = merge′-heap h₁ h₂ (≺ₗₑₓ-wellFounded _)
-
-merge′-¬null : ∀ {x₁ x₂} {t₁ t₂ : Tree} → ¬Null x₁ t₁ → ¬Null x₂ t₂ → (@0 rec : Acc _≺ₗₑₓ_ (t₁ , t₂)) → (¬Null x₁ ∪ ¬Null x₂) (merge′ t₁ t₂ rec)
-merge′-¬null {t₁ = node x₁ _ _ _} {t₂ = node x₂ _ _ _} ¬null ¬null _ with total x₁ x₂
-merge′-¬null {t₁ = t₁@(node x₁ n₁ tₗ₁ tᵣ₁)} {t₂ = t₂@(node x₂ n₂ tₗ₂ tᵣ₂)} ¬null ¬null (acc rs)
-  | inj₁ _ with merge′ tᵣ₁ t₂ (rs _ lexˡ)
-... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ₁)
-... | inj₁ _ = inj₁ ¬null
-... | inj₂ _ = inj₁ ¬null
-merge′-¬null {t₁ = t₁@(node x₁ n₁ tₗ₁ tᵣ₁)} {t₂ = t₂@(node x₂ n₂ tₗ₂ tᵣ₂)} ¬null ¬null (acc rs)
-  | inj₂ _ with merge′ t₁ tᵣ₂ (rs _ lexʳ)
-... | tᵣ′ with ℕ.≤-total (size tᵣ′) (size tₗ₂)
-... | inj₁ _ = inj₂ ¬null
-... | inj₂ _ = inj₂ ¬null
+merge-heap heap-nil heap-nil = heap-nil
+merge-heap heap-nil h₂@(heap-node _ _ _ _) = h₂
+merge-heap h₁@(heap-node _ _ _ _) heap-nil = h₁
+merge-heap {t₁ = t₁@(node x₁ n₁ tₗ₁ tᵣ₁)}       {t₂ = t₂@(node x₂ n₂ tₗ₂ tᵣ₂)}
+                 h₁@(heap-node x₁#tₗ₁ x₁#tᵣ₁ hₗ₁ hᵣ₁) h₂@(heap-node x₂#tₗ₂ x₂#tᵣ₂ hₗ₂ hᵣ₂)
+  = aux (merge-heap hᵣ₁ h₂) (merge-heap h₁ hᵣ₂)
+  where
+    aux : Heap (merge tᵣ₁ t₂) → Heap (merge t₁ tᵣ₂) → Heap (merge t₁ t₂)
+    aux with total x₁ x₂
+    aux | inj₁ x₁≤x₂ with ℕ.≤-total (size (merge tᵣ₁ t₂)) (size tₗ₁)
+    ... | inj₁ _ = λ hᵣ′ _ → heap-node x₁#tₗ₁ (merge-# x₁#tᵣ₁ (#-node x₁≤x₂)) hₗ₁ hᵣ′
+    ... | inj₂ _ = λ hᵣ′ _ → heap-node (merge-# x₁#tᵣ₁ (#-node x₁≤x₂)) x₁#tₗ₁ hᵣ′ hₗ₁
+    aux | inj₂ x₂≤x₁ with ℕ.≤-total (size (merge t₁ tᵣ₂)) (size tₗ₂)
+    ... | inj₁ _ = λ _ hᵣ′ → heap-node x₂#tₗ₂ (merge-# (#-node x₂≤x₁) x₂#tᵣ₂) hₗ₂ hᵣ′
+    ... | inj₂ _ = λ _ hᵣ′ → heap-node (merge-# (#-node x₂≤x₁) x₂#tᵣ₂) x₂#tₗ₂ hᵣ′ hₗ₂
 
 merge-¬null : ∀ {x₁ x₂} (t₁ t₂ : Tree) → ¬Null x₁ t₁ → ¬Null x₂ t₂ → (¬Null x₁ ∪ ¬Null x₂) (merge t₁ t₂)
-merge-¬null _ _ nn₁ nn₂ = merge′-¬null nn₁ nn₂ (≺ₗₑₓ-wellFounded _)
+merge-¬null t₁@(node x₁ n₁ tₗ₁ tᵣ₁) t₂@(node x₂ n₂ tₗ₂ tᵣ₂) ¬null ¬null = aux
+  where
+    aux : (¬Null x₁ ∪ ¬Null x₂) (merge t₁ t₂)
+    aux with total x₁ x₂
+    aux | inj₁ _ with ℕ.≤-total (size (merge tᵣ₁ t₂)) (size tₗ₁)
+    ... | inj₁ _ = inj₁ ¬null
+    ... | inj₂ _ = inj₁ ¬null
+    aux | inj₂ _ with ℕ.≤-total (size (merge t₁ tᵣ₂)) (size tₗ₂)
+    ... | inj₁ _ = inj₂ ¬null
+    ... | inj₂ _ = inj₂ ¬null
 
 popMin : Tree → Maybe (A × Tree)
 popMin nil = nothing
