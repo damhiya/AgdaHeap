@@ -189,7 +189,7 @@ merge-heap heap-nil heap-nil = heap-nil
 merge-heap heap-nil h₂@(heap-node _ _ _ _) = h₂
 merge-heap h₁@(heap-node _ _ _ _) heap-nil = h₁
 merge-heap {t₁ = t₁@(node x₁ n₁ tₗ₁ tᵣ₁)}       {t₂ = t₂@(node x₂ n₂ tₗ₂ tᵣ₂)}
-                 h₁@(heap-node x₁#tₗ₁ x₁#tᵣ₁ hₗ₁ hᵣ₁) h₂@(heap-node x₂#tₗ₂ x₂#tᵣ₂ hₗ₂ hᵣ₂)
+            h₁@(heap-node x₁#tₗ₁ x₁#tᵣ₁ hₗ₁ hᵣ₁) h₂@(heap-node x₂#tₗ₂ x₂#tᵣ₂ hₗ₂ hᵣ₂)
   = aux (merge-heap hᵣ₁ h₂) (merge-heap h₁ hᵣ₂)
   where
     aux : Heap (merge tᵣ₁ t₂) → Heap (merge t₁ tᵣ₂) → Heap (merge t₁ t₂)
