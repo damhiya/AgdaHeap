@@ -90,28 +90,16 @@ private
   open import Data.Nat.Tactic.RingSolver
 
   nat-lemma₁ : ∀ x y z w → w ≡ y + z → suc (x + w) ≡ suc ((x + y) + z)
-  nat-lemma₁ x y z w p = begin
-    suc (x + w)       ≡⟨ cong (suc ∘ (x +_)) p ⟩
-    suc (x + (y + z)) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
-    suc ((x + y) + z) ∎
+  nat-lemma₁ x y z w refl = solve (x ∷ y ∷ z ∷ [])
 
   nat-lemma₂ : ∀ x y z w → w ≡ x + y → suc (w + z) ≡ suc ((z + x) + y)
-  nat-lemma₂ x y z w p = begin
-    suc (w + z)       ≡⟨ cong (suc ∘ (_+ z)) p ⟩
-    suc ((x + y) + z) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
-    suc ((z + x) + y) ∎
+  nat-lemma₂ x y z w refl = solve (x ∷ y ∷ z ∷ [])
 
   nat-lemma₃ : ∀ x y z w → w ≡ y + z → suc (x + w) ≡ y + suc (x + z)
-  nat-lemma₃ x y z w p = begin
-    suc (x + w)       ≡⟨ cong (suc ∘ (x +_)) p ⟩
-    suc (x + (y + z)) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
-    y + suc (x + z)   ∎
+  nat-lemma₃ x y z w refl = solve (x ∷ y ∷ z ∷ [])
 
   nat-lemma₄ : ∀ x y z w → w ≡ x + y → suc (w + z) ≡ x + suc (z + y)
-  nat-lemma₄ x y z w p = begin
-    suc (w + z)       ≡⟨ cong (suc ∘ (_+ z)) p ⟩
-    suc ((x + y) + z) ≡⟨ solve (x ∷ y ∷ z ∷ []) ⟩
-    x + suc (z + y)   ∎
+  nat-lemma₄ x y z w refl = solve (x ∷ y ∷ z ∷ [])
 
 merge-count : ∀ (t₁ t₂ : Tree) → count (merge t₁ t₂) ≡ count t₁ + count t₂
 merge-count nil nil = refl
